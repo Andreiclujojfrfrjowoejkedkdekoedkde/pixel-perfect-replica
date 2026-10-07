@@ -55,7 +55,7 @@ function Offline() {
     return () => { map.off("moveend", f); };
   }, [map]);
 
-  const count = bbox ? tilesFor(bbox, 0, LEVELS[level].z).length : 0;
+  const count = bbox ? tilesFor(bbox, 0, LEVELS[level]!.z).length : 0;
   const tooBig = count > 12000;
   const save = (a: Area[]) => { setAreas(a); storage.set("areas", a); };
 
@@ -81,10 +81,10 @@ function Offline() {
     if (!bbox || tooBig) return;
     const tj = await fetch("https://tiles.openfreemap.org/planet").then((r) => r.json());
     const tpl: string = tj.tiles[0];
-    const urls = tilesFor(bbox, 0, Math.min(LEVELS[level].z, 14)).map(([z, x, y]) => tpl.replace("{z}", `${z}`).replace("{x}", `${x}`).replace("{y}", `${y}`));
+    const urls = tilesFor(bbox, 0, Math.min(LEVELS[level]!.z, 14)).map(([z, x, y]) => tpl.replace("{z}", `${z}`).replace("{x}", `${x}`).replace("{y}", `${y}`));
     for (const f of ["Noto Sans Regular", "Noto Sans Bold", "Noto Sans Italic"]) for (const r of ["0-255", "256-511"]) urls.push(`https://tiles.openfreemap.org/fonts/${encodeURIComponent(f)}/${r}.pbf`);
     urls.push("https://tiles.openfreemap.org/planet");
-    const area: Area = { id: `${Date.now()}`, name: name || `Area near ${map!.getCenter().lat.toFixed(2)}, ${map!.getCenter().lng.toFixed(2)}`, bbox, maxZoom: LEVELS[level].z, tiles: urls.length, bytes: 0, date: new Date().toISOString() };
+    const area: Area = { id: `${Date.now()}`, name: name || `Area near ${map!.getCenter().lat.toFixed(2)}, ${map!.getCenter().lng.toFixed(2)}`, bbox, maxZoom: LEVELS[level]!.z, tiles: urls.length, bytes: 0, date: new Date().toISOString() };
     queue.current = { urls, i: 0, area };
     pausedRef.current = false; setPaused(false);
     setProg({ done: 0, total: urls.length });
