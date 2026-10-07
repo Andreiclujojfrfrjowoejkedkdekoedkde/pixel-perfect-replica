@@ -15,13 +15,13 @@ const typeLetter = (t: string) => (t === "node" || t === "N" ? "N" : t === "way"
 function humanKind(key?: string, value?: string) {
   if (!value) return "Place";
   if (["house", "building", "residential", "yes"].includes(value)) return "Address";
-  if (key === "place") return value[0].toUpperCase() + value.slice(1);
+  if (key === "place") return value.charAt(0).toUpperCase() + value.slice(1);
   return value.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 }
 
 export async function photonSearch(q: string, center: [number, number], signal?: AbortSignal): Promise<Place[]> {
   const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${center[1]}&lon=${center[0]}&limit=8&lang=en`;
-  const r = await fetch(url, { signal });
+  const r = await fetch(url, { signal: signal ?? null });
   if (!r.ok) throw new Error("Search is unavailable right now.");
   const j = await r.json();
   return (j.features ?? []).map((f: any) => {
@@ -52,7 +52,7 @@ export const CATEGORIES = [
 export async function categorySearch(tag: string, bbox: [number, number, number, number], signal?: AbortSignal): Promise<Place[]> {
   const [w, s, e, n] = bbox;
   const q = `[out:json][timeout:20];nwr${tag}(${s},${w},${n},${e});out center tags 60;`;
-  const r = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: new URLSearchParams({ data: q }), signal });
+  const r = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: new URLSearchParams({ data: q }), signal: signal ?? null });
   if (!r.ok) throw new Error("Could not load places in this area.");
   const j = await r.json();
   return (j.elements ?? []).map((el: any) => {
@@ -78,7 +78,7 @@ export type PlaceDetails = Place & {
 
 export async function placeDetails(id: string): Promise<PlaceDetails> {
   if (id.startsWith("@")) {
-    const [lat, lon] = id.slice(1).split(",").map(Number);
+    const [lat = 0, lon = 0] = id.slice(1).split(",").map(Number);
     const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=jsonv2`);
     const j = r.ok ? await r.json() : {};
     return {

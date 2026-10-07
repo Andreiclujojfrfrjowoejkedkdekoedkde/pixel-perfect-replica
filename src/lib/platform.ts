@@ -94,7 +94,6 @@ let wakeLock: { release: () => Promise<void> } | null = null;
 export const keepAwake = {
   async on() {
     try {
-      // @ts-expect-error wakeLock is not in all TS lib versions
       wakeLock = await navigator.wakeLock?.request("screen");
     } catch {
       wakeLock = null;

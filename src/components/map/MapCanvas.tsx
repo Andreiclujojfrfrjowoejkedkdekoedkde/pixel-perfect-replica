@@ -85,7 +85,7 @@ export function MapCanvas() {
       properties: { active: i === st.activeRoute ? 1 : 0 },
       geometry: { type: "LineString", coordinates: r.coords },
     }));
-    lines.sort((a, b) => a.properties!.active - b.properties!.active);
+    lines.sort((a, b) => a.properties!["active"] - b.properties!["active"]);
     set("meridian-route", { type: "FeatureCollection", features: lines });
     if (!map.getLayer("meridian-route-case")) {
       map.addLayer({ id: "meridian-route-case", type: "line", source: "meridian-route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": dark ? "#1B1612" : "#FBF6EC", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 6, 16, 14] } });

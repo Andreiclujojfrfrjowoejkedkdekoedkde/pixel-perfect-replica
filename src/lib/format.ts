@@ -32,8 +32,8 @@ export function fmtClock(date: Date, f: "24h" | "12h") {
 export function parseCoords(q: string): [number, number] | null {
   const m = q.trim().match(/^(-?\d{1,2}(?:\.\d+)?)\s*[, ]\s*(-?\d{1,3}(?:\.\d+)?)$/);
   if (!m) return null;
-  const lat = +m[1];
-  const lon = +m[2];
+  const lat = Number(m[1]);
+  const lon = Number(m[2]);
   if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
   return [lon, lat];
 }
@@ -59,7 +59,7 @@ export function decodePolyline(str: string, precision = 6): [number, number][] {
 export function nearestOnLine(p: [number, number], line: [number, number][]) {
   let best = Infinity, idx = 0;
   for (let i = 0; i < line.length; i++) {
-    const d = haversine(p, line[i]);
+    const d = haversine(p, line[i]!);
     if (d < best) { best = d; idx = i; }
   }
   return { distance: best, index: idx };
@@ -70,6 +70,6 @@ export function formatOpeningHours(raw: string): string[] {
   const days: Record<string, string> = { Mo: "Mon", Tu: "Tue", We: "Wed", Th: "Thu", Fr: "Fri", Sa: "Sat", Su: "Sun", PH: "Holidays" };
   if (raw.trim() === "24/7") return ["Open 24 hours"];
   return raw.split(";").map((part) =>
-    part.trim().replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su|PH)\b/g, (d) => days[d]).replace(/-/g, "–").replace(/\boff\b/g, "closed"),
+    part.trim().replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su|PH)\b/g, (d) => days[d] ?? d).replace(/-/g, "–").replace(/\boff\b/g, "closed"),
   ).filter(Boolean);
 }

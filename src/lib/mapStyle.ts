@@ -99,7 +99,7 @@ export function buildStyle(mode: MapMode, o: { dark: boolean; buildings3d: boole
   };
 
   if (mode === "earth") {
-    sources.sat = {
+    sources["sat"] = {
       type: "raster", tileSize: 256, maxzoom: 19,
       tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
       attribution: "Imagery © Esri, Maxar, Earthstar Geographics",
@@ -118,7 +118,7 @@ export function buildStyle(mode: MapMode, o: { dark: boolean; buildings3d: boole
   style.layers.push(...vectorLayers(p, o.labelScale, { buildings3d: is3d && o.buildings3d, labels: true, base: true }));
 
   if (is3d) {
-    sources.dem = {
+    sources["dem"] = {
       type: "raster-dem", encoding: "terrarium", tileSize: 256, maxzoom: 14,
       tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
       attribution: "Terrain: Mapzen, AWS Open Data",
@@ -136,7 +136,7 @@ export function buildStyle(mode: MapMode, o: { dark: boolean; buildings3d: boole
   }
 
   if (mode === "street" && env.mapillary) {
-    sources.mly = {
+    sources["mly"] = {
       type: "vector", minzoom: 6, maxzoom: 14,
       tiles: [`https://tiles.mapillary.com/maps/vtp/mly1_public/2/{z}/{x}/{y}?access_token=${env.mapillary}`],
       attribution: "Street imagery © Mapillary",
