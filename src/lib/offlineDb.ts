@@ -90,11 +90,23 @@ export const offlineDb = {
     ),
   deleteArea: async (id: string) => {
     await run(AREAS, "readwrite", (s) => s.delete(id) as unknown as IDBRequest<undefined>);
-    await run(
-      PLACES,
-      "readwrite",
-      (s) => s.delete(IDBKeyRange.only(id)) as unknown as IDBRequest<undefined>,
-    );
+    // Must go through the index: the primary key is the place id, not the area,
+    // so deleting by key range on the store itself silently removes nothing.
+    // No IDBIndex.delete in the DOM typings, so walk the cursor instead.
+    const db = await open();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(PLACES, "readwrite");
+      const req = tx.objectStore(PLACES).index("areaId").openKeyCursor(IDBKeyRange.only(id));
+      req.onsuccess = () => {
+        const cursor = req.result;
+        if (!cursor) return;
+        tx.objectStore(PLACES).delete(cursor.primaryKey);
+        cursor.continue();
+      };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error ?? new Error("Could not clear the offline index."));
+      tx.onabort = () => reject(tx.error ?? new Error("Could not clear the offline index."));
+    });
   },
   putPlaces: async (places: OfflinePlace[]) => {
     if (!places.length) return;

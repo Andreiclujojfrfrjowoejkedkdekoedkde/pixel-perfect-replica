@@ -2,24 +2,31 @@ import { useEffect, useState } from "react";
 import { offlineDb, type BBox, type OfflinePlace } from "./offlineDb";
 import { searchIndex } from "./offlineTiles";
 import { network } from "./platform";
-import { useMapState } from "@/components/map/MapContext";
+import { useOptionalMapState } from "@/components/map/MapContext";
 import type { Place } from "./services";
 
 /**
  * Searches the on-device index for downloaded areas. Returns nothing when the
  * app is online and the viewport is not covered, so the online geocoder stays in
  * charge and the user is never shown stale local names.
+ *
+ * Uses the optional map context because the home screen renders a search box
+ * with no map behind it.
  */
 export function useOfflineSearch() {
-  const { map } = useMapState();
+  const map = useOptionalMapState()?.map ?? null;
   const [places, setPlaces] = useState<OfflinePlace[] | null>(null);
   const [covered, setCovered] = useState(false);
 
   useEffect(() => {
-    if (!map) return;
+    if (!map) {
+      setPlaces(null);
+      setCovered(false);
+      return;
+    }
     let live = true;
     const load = async () => {
-      const bbox = bboxOf(map);
+      const bbox = viewportBBox(map);
       const areas = await offlineDb.areasForBounds(bbox).catch(() => []);
       if (!live) return;
       setCovered(areas.length > 0);
@@ -38,7 +45,7 @@ export function useOfflineSearch() {
       live = false;
       map.off("moveend", onMove);
     };
-  }, [map /* area set changes come from the offline page */]);
+  }, [map]);
 
   return {
     places,
@@ -65,11 +72,11 @@ export function offlineResults(
   }));
 }
 
-export const viewportBBox = (map: {
+type BoundsLike = {
   getBounds: () => { getWest(): number; getSouth(): number; getEast(): number; getNorth(): number };
-}): BBox => {
+};
+
+export const viewportBBox = (map: BoundsLike): BBox => {
   const b = map.getBounds();
   return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
 };
-
-const bboxOf = (map: Parameters<typeof viewportBBox>[0]) => viewportBBox(map);

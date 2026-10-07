@@ -7,6 +7,7 @@ import {
   HardDriveDownload,
   Pencil,
   Pause,
+  Play,
   PencilRuler,
   Search,
   Trash2,
@@ -36,7 +37,7 @@ import {
   type Estimate,
 } from "@/lib/offlineTiles";
 
-export const Route = createFileRoute("/_map/offline")({
+export const Route = createFileRoute("/map/offline")({
   validateSearch: z.object({ lat: z.number().optional(), lon: z.number().optional() }),
   head: () => ({
     meta: [
@@ -76,6 +77,7 @@ export function Offline() {
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const downloader = useRef(new AreaDownloader());
   const drawn = useRef<DrawShape>({ kind: "none" });
   drawn.current = shape;
@@ -100,8 +102,12 @@ export function Offline() {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
     // Progress arrives through the downloader, which owns the only writer.
     return downloader.current.subscribe((_progress, area) => {
+      // Keep local mirror state in step with the single writer.
       setRunning(true);
-      void persist(area).finally(() => setRunning(false));
+      setIsPaused(area.state === "paused");
+      void persist(area).finally(() =>
+        setRunning(area.state === "downloading" || area.state === "paused"),
+      );
     });
   }, [persist]);
 
@@ -220,7 +226,9 @@ export function Offline() {
       setBusy("index");
       const indexed: OfflinePlace[] = await buildSearchIndex(area).catch(() => []);
       if (indexed.length) await offlineDb.putPlaces(indexed);
-      await persist({ ...area, state: "ready", placeCount: indexed.length });
+      // Re-read: the downloader recorded the real tile count and byte total.
+      const stored = await offlineDb.getArea(id);
+      await persist({ ...area, ...(stored ?? {}), state: "ready", placeCount: indexed.length });
       setShape({ kind: "none" });
       setMode({ kind: "none" });
       setName("");
@@ -234,8 +242,10 @@ export function Offline() {
   const cancel = () => {
     void downloader.current.stop();
   };
-  const pause = () => downloader.current.pause();
-  const resume = () => downloader.current.resume();
+  const togglePause = () => {
+    if (downloader.current.paused) downloader.current.resume();
+    else downloader.current.pause();
+  };
 
   const remove = async (a: OfflineArea) => {
     await downloader.current.drop(a);
@@ -429,10 +439,18 @@ export function Offline() {
           {running && (
             <>
               <button
-                onClick={pause}
+                onClick={togglePause}
                 className="glass flex items-center gap-1 rounded-xl px-3 text-sm"
               >
-                <Pause strokeWidth={1.5} className="h-4 w-4" /> Pause
+                {isPaused ? (
+                  <>
+                    <Play strokeWidth={1.5} className="h-4 w-4" /> Resume
+                  </>
+                ) : (
+                  <>
+                    <Pause strokeWidth={1.5} className="h-4 w-4" /> Pause
+                  </>
+                )}
               </button>
               <button
                 onClick={cancel}

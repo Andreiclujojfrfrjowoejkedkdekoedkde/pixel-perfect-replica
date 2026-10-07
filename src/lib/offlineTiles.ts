@@ -177,8 +177,17 @@ export class AreaDownloader {
     return this.job !== null;
   }
 
-  async start(area: OfflineArea, urls: string[], onArea: (a: OfflineArea) => void) {
-    await this.stop();
+  get paused() {
+    return this.job?.paused ?? false;
+  }
+
+  /**
+   * Starts a download and resolves when it finishes, is cancelled, or fails.
+   * Awaiting this matters: the caller must not mark an area "ready" while tiles
+   * are still arriving, or offline search would claim to cover empty ground.
+   */
+  start(area: OfflineArea, urls: string[], onArea: (a: OfflineArea) => void): Promise<void> {
+    this.stop();
     const job: Job = {
       area,
       urls,
@@ -190,7 +199,9 @@ export class AreaDownloader {
     };
     this.job = job;
     this.update(job, onArea, { state: "downloading", done: 0 });
-    void this.loop(job, onArea);
+    return new Promise<void>((resolve) => {
+      this.loop(job, onArea).finally(resolve);
+    });
   }
 
   /** Single writer for the area record so progress can never go backwards. */
@@ -254,7 +265,7 @@ export class AreaDownloader {
   }
 
   /** Stop fetching but keep what was already downloaded. */
-  async stop() {
+  stop() {
     if (!this.job) return;
     this.job.cancelled = true;
     this.job.controller.abort();
@@ -275,7 +286,7 @@ export class AreaDownloader {
   }
 
   async drop(area: OfflineArea) {
-    await this.stop();
+    this.stop();
     if (typeof caches !== "undefined") await caches.delete(area.cacheName);
   }
 }

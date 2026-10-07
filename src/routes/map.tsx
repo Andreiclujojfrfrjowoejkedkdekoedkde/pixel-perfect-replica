@@ -8,6 +8,7 @@ import { BottomSheet } from "@/components/shell/BottomSheet";
 import { HomePanel } from "@/components/shell/HomePanel";
 import { StreetViewer } from "@/components/map/StreetViewer";
 import { SpeedPill } from "@/components/nav/SpeedPill";
+import { VehicleMarker } from "@/components/nav/VehicleMarker";
 import { SpeedLimitsProvider } from "@/components/nav/SpeedLimitsContext";
 import { SpeedLimitSigns } from "@/components/map/SpeedLimitSigns";
 import { HazardProvider } from "@/lib/hazardsStore";
@@ -18,7 +19,7 @@ import { GlassDefs } from "@/components/glass/GlassDefs";
 import { useSettings } from "@/lib/settings";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export const Route = createFileRoute("/_map")({
+export const Route = createFileRoute("/map")({
   component: MapLayout,
 });
 
@@ -50,13 +51,16 @@ function Shell() {
   const bp = useBreakpoint();
   const matchRoute = useMatchRoute();
   const navigate = useNavigate();
-  const { map, navigating } = useMapState();
+  const { map, navigating, position } = useMapState();
   const searchRef = useRef<HTMLInputElement>(null);
   const [layersOpen, setLayersOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const isHome = !!matchRoute({ to: "/" });
-  const isPlace = !!matchRoute({ to: "/place/$id" });
-  const isSettings = !!matchRoute({ to: "/settings" });
+  const [bearing, setBearing] = useState<number | null>(null);
+  const isHome = !!matchRoute({ to: "/map" });
+  const isPlace = !!matchRoute({ to: "/map/place/$id" });
+
+  // The vehicle arrow turns with the compass when we have one.
+  useEffect(() => setBearing(position?.heading ?? null), [position?.heading]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -70,7 +74,7 @@ function Shell() {
       else if (e.key === "-") map?.zoomOut();
       else if (e.key === "Escape") {
         if (layersOpen) setLayersOpen(false);
-        else if (!isHome && !navigating) navigate({ to: "/" });
+        else if (!isHome && !navigating) navigate({ to: "/map" });
       }
     };
     addEventListener("keydown", h);
@@ -83,6 +87,7 @@ function Shell() {
     <main className="fixed inset-0 overflow-hidden bg-background">
       <GlassDefs />
       <MapCanvas />
+      <VehicleMarker bearing={bearing} navigating={navigating} />
       <SpeedLimitSigns />
       <HazardMarkers />
       <NetworkBadge />
@@ -103,10 +108,7 @@ function Shell() {
             </div>
           )}
           {!navigating && (
-            <BottomSheet
-              snap={isHome ? "peek" : isSettings ? "full" : "half"}
-              title="Results and details"
-            >
+            <BottomSheet snap={isHome ? "peek" : "half"} title="Results and details">
               {isHome ? <HomePanel /> : <Outlet />}
             </BottomSheet>
           )}

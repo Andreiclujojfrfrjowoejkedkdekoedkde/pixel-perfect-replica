@@ -66,7 +66,10 @@ export const storage = {
 
 export const network = {
   online(): boolean {
-    return typeof navigator === "undefined" ? true : navigator.onLine;
+    // Node exposes a `navigator` global with no meaningful onLine, so treat an
+    // undefined value as online rather than flipping the whole app to offline.
+    if (typeof navigator === "undefined") return true;
+    return navigator.onLine ?? true;
   },
   subscribe(cb: (online: boolean) => void): () => void {
     const on = () => cb(true);

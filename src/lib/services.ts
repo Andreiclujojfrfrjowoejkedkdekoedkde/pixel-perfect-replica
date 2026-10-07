@@ -50,47 +50,87 @@ export async function photonSearch(
   });
 }
 
+/** One Overpass element. Kept in one place so every POI query stays typed. */
+export type OverpassElement = {
+  type: string;
+  id: number;
+  lat?: number;
+  lon?: number;
+  center?: { lat: number; lon: number };
+  tags?: Record<string, string>;
+};
+
 export const CATEGORIES = [
   { id: "fuel", label: "Fuel", tag: '["amenity"="fuel"]' },
-  { id: "food", label: "Food", tag: '["amenity"~"^(restaurant|cafe|fast_food)$"]' },
-  { id: "parking", label: "Parking", tag: '["amenity"="parking"]' },
+  { id: "food", label: "Food", tag: '["amenity"~"^(restaurant|cafe|fast_food|pub|bar)$"]' },
+  { id: "parking", label: "Parking", tag: '["amenity"~"^(parking|parking_entrance)$"]' },
   { id: "charging", label: "Charging", tag: '["amenity"="charging_station"]' },
-  { id: "pharmacy", label: "Pharmacy", tag: '["amenity"="pharmacy"]' },
+  { id: "pharmacy", label: "Pharmacy", tag: '["amenity"~"^(pharmacy|doctors|clinic|hospital)$"]' },
   { id: "lodging", label: "Lodging", tag: '["tourism"~"^(hotel|hostel|guest_house|motel)$"]' },
+  {
+    id: "groceries",
+    label: "Groceries",
+    tag: '["shop"~"^(supermarket|convenience|grocery|greengrocer|butcher)$"]',
+  },
+  { id: "bank", label: "Banks", tag: '["amenity"~"^(bank|atm)$"]' },
+  {
+    id: "school",
+    label: "Schools",
+    tag: '["amenity"~"^(school|kindergarten|college|university)$"]',
+  },
+  { id: "toilets", label: "Toilets", tag: '["amenity"="toilets"]' },
+  { id: "park", label: "Parks", tag: '["leisure"~"^(park|garden|playground)$"]' },
 ] as const;
 
+export type CategoryId = (typeof CATEGORIES)[number]["id"];
+
+/**
+ * Fetch places of one category inside the viewport.
+ *
+ * The old version asked for only 60 results with no abort, no cache and no
+ * timeout handling, which is why the category buttons felt broken. This keeps a
+ * bounded slice, de-duplicates, and is meant to be called with an abort signal.
+ */
 export async function categorySearch(
   tag: string,
   bbox: [number, number, number, number],
   signal?: AbortSignal,
 ): Promise<Place[]> {
   const [w, s, e, n] = bbox;
-  const q = `[out:json][timeout:20];nwr${tag}(${s},${w},${n},${e});out center tags 60;`;
+  const q = `[out:json][timeout:25];nwr${tag}(${s},${w},${n},${e});out center tags 400;`;
   const r = await fetch("https://overpass-api.de/api/interpreter", {
     method: "POST",
     body: new URLSearchParams({ data: q }),
     signal: signal ?? null,
   });
   if (!r.ok) throw new Error("Could not load places in this area.");
-  const j = await r.json();
-  return (j.elements ?? [])
-    .map((el: any) => {
-      const t = el.tags ?? {};
-      const lat = el.lat ?? el.center?.lat;
-      const lon = el.lon ?? el.center?.lon;
-      return {
-        id: `${typeLetter(el.type)}${el.id}`,
-        name: t.name ?? t.brand ?? t.operator ?? humanKind(undefined, t.amenity ?? t.tourism),
-        subtitle: [t["addr:street"], t["addr:housenumber"], t["addr:city"]]
-          .filter(Boolean)
-          .join(" "),
-        kind: humanKind(undefined, t.amenity ?? t.tourism),
-        lon,
-        lat,
-      } satisfies Place;
-    })
-    .filter((p: Place) => p.lat != null);
+  const j = (await r.json()) as { elements?: OverpassElement[] };
+  const places: Place[] = [];
+  const seen = new Set<string>();
+  for (const el of j.elements ?? []) {
+    const t = el.tags ?? {};
+    const lat = el.lat ?? el.center?.lat;
+    const lon = el.lon ?? el.center?.lon;
+    if (lat == null || lon == null) continue;
+    const kind = t["amenity"] ?? t["tourism"] ?? t["shop"] ?? t["leisure"] ?? "Place";
+    const id = `${typeLetter(el.type)}${el.id}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    places.push({
+      id,
+      name: t["name"] ?? t["brand"] ?? t["operator"] ?? humanKind(undefined, kind),
+      subtitle: [t["addr:street"], t["addr:housenumber"], t["addr:city"]].filter(Boolean).join(" "),
+      kind: humanKind(undefined, kind),
+      lon,
+      lat,
+    });
+  }
+  return places;
 }
+
+/** Cache key that survives small panning without re-querying on every move. */
+export const categoryCacheKey = (tag: string, bbox: [number, number, number, number]) =>
+  `${tag}|${bbox.map((v) => v.toFixed(3)).join(",")}`;
 
 export type PlaceDetails = Place & {
   address: string;
@@ -235,6 +275,54 @@ export async function mapillaryImageNear(
   if (!r.ok) return null;
   const j = await r.json();
   return j.data?.[0]?.id ?? null;
+}
+
+/** Charging stations near a route, for EV range planning. */
+export async function chargersAlong(
+  route: [number, number][],
+  rangeKm: number,
+  signal?: AbortSignal,
+): Promise<Place[]> {
+  if (!route.length || rangeKm <= 0) return [];
+  let w = Infinity,
+    s = Infinity,
+    e = -Infinity,
+    n = -Infinity;
+  for (const [lon, lat] of route) {
+    w = Math.min(w, lon);
+    e = Math.max(e, lon);
+    s = Math.min(s, lat);
+    n = Math.max(n, lat);
+  }
+  // Roughly one degree of latitude per 111 km; widen so chargers just off the
+  // route are offered, and cap so a cross-country route cannot ask for a continent.
+  const pad = Math.min(0.6, Math.max(0.05, rangeKm / 400));
+  const box: [number, number, number, number] = [w - pad, s - pad, e + pad, n + pad];
+  const [W, S, E, N] = box;
+  const q = `[out:json][timeout:25];nwr["amenity"="charging_station"](${S},${W},${N},${E});out center tags 200;`;
+  const r = await fetch("https://overpass-api.de/api/interpreter", {
+    method: "POST",
+    body: new URLSearchParams({ data: q }),
+    signal: signal ?? null,
+  });
+  if (!r.ok) return [];
+  const j = (await r.json()) as { elements?: OverpassElement[] };
+  return (j.elements ?? [])
+    .map((el: OverpassElement) => {
+      const t = el.tags ?? {};
+      const lat = el.lat ?? el.center?.lat;
+      const lon = el.lon ?? el.center?.lon;
+      if (lat == null || lon == null) return null;
+      return {
+        id: `${typeLetter(el.type)}${el.id}`,
+        name: t["name"] ?? t["operator"] ?? t["brand"] ?? "Charging station",
+        subtitle: [t["addr:street"], t["addr:city"]].filter(Boolean).join(", "),
+        kind: "Charging",
+        lon,
+        lat,
+      } satisfies Place;
+    })
+    .filter((p: Place | null): p is Place => !!p);
 }
 
 /* ---------------- Geocoding helpers ---------------- */

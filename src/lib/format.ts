@@ -115,6 +115,14 @@ export function projectOnLine(p: [number, number], line: [number, number][]) {
     distance: line.length > 1 ? best : line[0] ? haversine(p, line[0]) : Infinity,
     index,
     frac: index + t,
+    /** Metres from the start of the line to this projection. */
+    metres(along: [number, number][]) {
+      let total = 0;
+      for (let i = 0; i < index && i < along.length - 1; i++) {
+        total += haversine(along[i]!, along[i + 1]!);
+      }
+      return total + distanceToSegment(p, along[index]!, along[index + 1]!).distance;
+    },
   };
 }
 

@@ -24,7 +24,7 @@
     }
   ],
   "shortcuts": [
-    { "name": "Offline maps", "url": "/offline" },
+    { "name": "Offline maps", "url": "/map/offline" },
     { "name": "Settings", "url": "/settings" }
   ]
 }
