@@ -51,9 +51,15 @@ export function Guidance({ route: initial, destination, mode, onEnd }: { route: 
   // Camera follow, heading-up.
   useEffect(() => {
     if (!progress || !map) return;
-    const ahead = route.coords[Math.min(progress.index + 3, route.coords.length - 1)]!;
-    const bearing = position?.heading ?? (Math.atan2(ahead[0] - progress.me[0], ahead[1] - progress.me[1]) * 180) / Math.PI;
-    map.easeTo({ center: progress.me, bearing, pitch: 55, duration: 900 });
+    const [lon, lat] = progress.me;
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
+    const ahead = route.coords[Math.min(progress.index + 3, route.coords.length - 1)];
+    // Browsers report heading as NaN/null when stationary; NaN breaks MapLibre's camera.
+    const h = position?.heading;
+    let bearing = typeof h === "number" && Number.isFinite(h) ? h
+      : ahead ? (Math.atan2(ahead[0] - lon, ahead[1] - lat) * 180) / Math.PI : map.getBearing();
+    if (!Number.isFinite(bearing)) bearing = map.getBearing();
+    try { map.easeTo({ center: [lon, lat], bearing, pitch: 55, duration: 900 }); } catch { /* map torn down */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress?.me[0], progress?.me[1]]);
 
