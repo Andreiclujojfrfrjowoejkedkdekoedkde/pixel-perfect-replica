@@ -113,12 +113,16 @@ server-side state and I would rather not fake it with the client's location.
 
 ## Deploying
 
-Meridian builds to a Cloudflare Worker, not a static site: `.output/server/index.mjs`
-is the entry and `.output/public` is the static asset binding. Publish `.output`,
-not `dist/client` — there is no `dist/` and no `index.html`, because pages render
-per request. SSR is required for the hazard-classification server function and the
-Supabase auth middleware. `npm run build` ends with a check that prints these paths
-and fails loudly on incomplete output.
+Meridian is server-rendered, so it ships static assets _and_ server output. The
+Nitro target is pinned in `vite.config.ts` and defaults to `netlify`, which writes
+assets to `dist/` and the serverless function to `.netlify/functions-internal/`.
+Deploy with `bun run build` and publish `dist` (also declared in `netlify.toml`).
+For Cloudflare Workers build with `MERIDIAN_NITRO_PRESET=cloudflare-module`, which
+writes `.output` instead and deploys the worker. `bun run build` ends with
+`scripts/verify-build.mjs`, which reads Nitro's manifest, validates the output it
+declared, prints the right publish directory for the preset in use, and fails
+loudly on incomplete output. It is preset-agnostic: an earlier version hard-coded
+the cloudflare paths and broke the Netlify deploy.
 
 ## Needs configuration
 

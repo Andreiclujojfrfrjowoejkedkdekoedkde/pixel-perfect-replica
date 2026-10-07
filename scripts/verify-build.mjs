@@ -1,59 +1,96 @@
-// Confirms the build produced what this template actually deploys, and says so
-// out loud.
+// Confirms the build produced what Nitro says it produced, for any platform.
 //
-// Meridian is a TanStack Start app on Nitro's `cloudflare-module` preset, so it
-// builds to a Cloudflare Worker with a static asset binding — NOT to a Vite
-// `dist/client` folder. A deploy configured for `dist/client` fails with a
-// confusing "directory does not exist" long after the build succeeded, so we
-// check the real output here and print the directory to publish.
+// Nitro picks its own output layout from the deploy target: cloudflare-module
+// writes `.output`, netlify writes `.netlify/functions-internal` plus `dist`,
+// and a Lovable build pins this with LOVABLE_NITRO_PRESET. Hard-coding one
+// layout here broke a Netlify deploy, so this reads Nitro's own manifest
+// instead of guessing, and only fails when the build genuinely produced nothing.
 
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 const root = process.cwd();
-const output = join(root, ".output");
-const serverEntry = join(output, "server", "index.mjs");
-const publicDir = join(output, "public");
-const workerConfig = join(output, "server", "wrangler.json");
 
-const problems = [];
+/** Where Nitro leaves its manifest, per preset. */
+const MANIFESTS = [
+  ".output/nitro.json",
+  ".netlify/functions-internal/nitro.json",
+  ".vercel/output/nitro.json",
+];
 
-if (!existsSync(serverEntry)) problems.push("missing .output/server/index.mjs (the worker entry)");
-if (!existsSync(publicDir)) problems.push("missing .output/public (the static assets)");
-if (existsSync(publicDir) && !existsSync(join(publicDir, "sw.js"))) {
-  problems.push("missing .output/public/sw.js (the service worker would not be cached)");
-}
-if (existsSync(publicDir) && !existsSync(join(publicDir, "index.html"))) {
-  // Expected, not a problem: the HTML is rendered by the worker at request time.
-  // Worth stating because it is the reason a static publish cannot work here.
-}
+const found = MANIFESTS.map((p) => join(root, p)).filter((p) => existsSync(p));
 
-if (problems.length) {
-  console.error("\n[meridian] Build output is incomplete:");
-  for (const p of problems) console.error(`  - ${p}`);
+if (!found.length) {
+  console.error("[meridian] No Nitro build output found.");
+  console.error(`[meridian] Looked for: ${MANIFESTS.join(", ")}`);
+  console.error("[meridian] The build did not run to completion.");
   process.exit(1);
 }
 
-let assetCount = 0;
-try {
-  assetCount = readFileSync(join(output, "nitro.json"), "utf8") ? 1 : 0;
-} catch {
-  /* nitro.json is informational only */
+let manifest;
+let manifestPath = found[0];
+for (const path of found) {
+  try {
+    manifest = JSON.parse(readFileSync(path, "utf8"));
+    manifestPath = path;
+    break;
+  } catch {
+    /* try the next candidate */
+  }
 }
-void assetCount;
 
-const hasWorkerConfig = existsSync(workerConfig);
+if (!manifest) {
+  console.error("[meridian] Nitro manifest exists but could not be read.");
+  process.exit(1);
+}
 
-console.log("\n[meridian] Build OK.");
-console.log("[meridian] This is a server-rendered Cloudflare Worker, not a static site:");
-console.log(`[meridian]   worker entry : .output/server/index.mjs`);
-console.log(`[meridian]   static assets: .output/public`);
-console.log(
-  `[meridian]   wrangler cfg : ${hasWorkerConfig ? ".output/server/wrangler.json" : "(none generated)"}`,
-);
-if (!existsSync(join(publicDir, "index.html"))) {
-  console.log("[meridian] Note: there is no index.html because pages are rendered per request.");
-  console.log("[meridian] Deploy the worker (or point the publish directory at .output).");
-  console.log("[meridian] Publishing dist/client will not work for this app.");
+const base = dirname(manifestPath);
+const preset = manifest.preset || "unknown";
+const serverEntry = manifest.serverEntry ? resolve(base, manifest.serverEntry) : null;
+const publicDir = manifest.publicDir ? resolve(base, manifest.publicDir) : null;
+
+const missing = [];
+if (!serverEntry || !existsSync(serverEntry)) {
+  missing.push(`server entry not found (expected ${serverEntry ?? "unknown"})`);
+}
+if (!publicDir || !existsSync(publicDir)) {
+  missing.push(`static assets not found (expected ${publicDir ?? "unknown"})`);
+}
+
+if (missing.length) {
+  console.error("[meridian] Build output is incomplete:");
+  for (const m of missing) console.error(`  - ${m}`);
+  process.exit(1);
+}
+
+const rel = (p) => p.replace(`${root}/`, "").replace(`${root}\\`, "");
+const hasIndexHtml = existsSync(join(publicDir, "index.html"));
+const hasServiceWorker = existsSync(join(publicDir, "sw.js"));
+
+console.log("");
+console.log("[meridian] Build OK.");
+console.log(`[meridian]   nitro preset  : ${preset}`);
+console.log(`[meridian]   server entry : ${rel(serverEntry)}`);
+console.log(`[meridian]   static assets: ${rel(publicDir)}`);
+
+if (preset === "netlify") {
+  console.log(`[meridian] Deploy settings: command "bun run build", publish "${rel(publicDir)}"`);
+} else if (preset === "cloudflare-module") {
+  console.log('[meridian] Deploy settings: deploy the Cloudflare Worker from ".output"');
+} else {
+  console.log(`[meridian] Deploy settings: publish "${rel(publicDir)}"`);
+}
+
+// Pages are rendered per request, so no index.html is emitted for SSR presets.
+// That is expected, and it is why the publish directory alone is not enough:
+// the serverless function has to be deployed too.
+if (!hasIndexHtml) {
+  console.log(
+    "[meridian] Note: no index.html, because pages are rendered per request by the server.",
+  );
+  console.log("[meridian] This app needs its server output deployed, not just static files.");
+}
+if (!hasServiceWorker) {
+  console.log("[meridian] Warning: sw.js is missing, the offline app shell will not install.");
 }
 console.log("");

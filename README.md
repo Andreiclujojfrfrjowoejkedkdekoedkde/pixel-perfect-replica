@@ -7,34 +7,42 @@ Built with [Lovable](https://lovable.dev).
 
 ## Deploying
 
-**Meridian is a server-rendered Cloudflare Worker, not a static site.**
+**Meridian is a server-rendered app, not a static site.** It must ship both its
+static assets _and_ its server output, because pages are rendered per request and
+the hazard-classification endpoint is a server function.
 
-`npm run build` (Nitro, `cloudflare-module` preset) produces:
+The Nitro target is pinned in `vite.config.ts` so the output layout does not
+depend on which machine runs the build. It defaults to `netlify`:
 
-| Path                           | What it is                                            |
-| ------------------------------ | ----------------------------------------------------- |
-| `.output/server/index.mjs`     | the worker entry that renders every page              |
-| `.output/public`               | hashed JS/CSS, icons, `sw.js`, `manifest.webmanifest` |
-| `.output/server/wrangler.json` | worker + static asset binding config                  |
+| Output                                        | What it is                                                           |
+| --------------------------------------------- | -------------------------------------------------------------------- |
+| `dist/`                                       | static assets: hashed JS/CSS, icons, `sw.js`, `manifest.webmanifest` |
+| `.netlify/functions-internal/server/main.mjs` | the function that renders every page                                 |
 
-Deploy settings that work:
+Deploy settings (also in `netlify.toml`):
 
-- **Build command:** `bun run build` (or `npm run build`)
-- **Publish directory:** `.output`
+- **Build command:** `bun run build`
+- **Publish directory:** `dist`
+
+To deploy to Cloudflare Workers instead, build with
+`MERIDIAN_NITRO_PRESET=cloudflare-module bun run build`. That layout puts the
+worker entry in `.output/server/index.mjs` with assets bound from
+`.output/public`, and the deploy target is the worker rather than a static
+directory.
 
 Two things to know:
 
 - **Do not publish `dist/client`.** That is the default for a plain Vite SPA and
-  this project is not one. There is no `dist/` directory and no `index.html`,
-  because pages are rendered per request by the worker. A static publish will
-  either fail outright or serve a site with no HTML.
-- **SSR cannot be dropped.** The hazard-classification endpoint is a server
-  function, and the Supabase auth middleware runs server-side. Publishing only
-  the client assets would silently break both.
+  this project is not one. There is no `dist/client` and no `index.html`, because
+  pages are rendered per request.
+- **Dropping SSR is not an option.** The hazard server function and the Supabase
+  auth middleware both run server-side; publishing only the client assets would
+  break them silently.
 
-`npm run build` ends with a check that prints these paths and fails loudly if the
-build output is incomplete, so a misconfigured publish directory is obvious from
-the build log alone.
+`bun run build` ends with `scripts/verify-build.mjs`, which reads Nitro's own
+manifest, checks the output it declared actually exists, prints the correct
+publish directory for the preset in use, and fails loudly if the build is
+incomplete. It works for every preset rather than assuming one layout.
 
 ## Development
 
