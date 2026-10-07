@@ -32,7 +32,7 @@ function PlacePage() {
   useEffect(() => {
     if (!p) return;
     setMarkers([p]);
-    map?.flyTo({ center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 16), padding: innerWidth < 768 ? { bottom: innerHeight * 0.5 } : undefined });
+    map?.flyTo({ center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 16), padding: innerWidth < 768 ? { top: 0, left: 0, right: 0, bottom: innerHeight * 0.5 } : 0 });
     return () => setMarkers([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p?.id, map]);
