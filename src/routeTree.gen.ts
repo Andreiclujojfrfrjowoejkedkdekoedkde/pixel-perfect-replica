@@ -9,50 +9,152 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as MapRouteImport } from './routes/_map'
+import { Route as MapIndexRouteImport } from './routes/_map/index'
+import { Route as MapDirectionsRouteImport } from './routes/_map/directions'
+import { Route as MapOfflineRouteImport } from './routes/_map/offline'
+import { Route as MapSettingsRouteImport } from './routes/_map/settings'
+import { Route as MapPlaceIdRouteImport } from './routes/_map/place.$id'
 
-const IndexRoute = IndexRouteImport.update({
+const MapRoute = MapRouteImport.update({
+  id: '/_map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapIndexRoute = MapIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => MapRoute,
+} as any)
+const MapDirectionsRoute = MapDirectionsRouteImport.update({
+  id: '/directions',
+  path: '/directions',
+  getParentRoute: () => MapRoute,
+} as any)
+const MapOfflineRoute = MapOfflineRouteImport.update({
+  id: '/offline',
+  path: '/offline',
+  getParentRoute: () => MapRoute,
+} as any)
+const MapSettingsRoute = MapSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => MapRoute,
+} as any)
+const MapPlaceIdRoute = MapPlaceIdRouteImport.update({
+  id: '/place/$id',
+  path: '/place/$id',
+  getParentRoute: () => MapRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof MapIndexRoute
+  '/directions': typeof MapDirectionsRoute
+  '/offline': typeof MapOfflineRoute
+  '/settings': typeof MapSettingsRoute
+  '/place/$id': typeof MapPlaceIdRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/directions': typeof MapDirectionsRoute
+  '/offline': typeof MapOfflineRoute
+  '/settings': typeof MapSettingsRoute
+  '/': typeof MapIndexRoute
+  '/place/$id': typeof MapPlaceIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_map': typeof MapRouteWithChildren
+  '/_map/directions': typeof MapDirectionsRoute
+  '/_map/offline': typeof MapOfflineRoute
+  '/_map/settings': typeof MapSettingsRoute
+  '/_map/': typeof MapIndexRoute
+  '/_map/place/$id': typeof MapPlaceIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/directions' | '/offline' | '/settings' | '/place/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/directions' | '/offline' | '/settings' | '/' | '/place/$id'
+  id:
+    | '__root__'
+    | '/_map'
+    | '/_map/directions'
+    | '/_map/offline'
+    | '/_map/settings'
+    | '/_map/'
+    | '/_map/place/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  MapRoute: typeof MapRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_map': {
+      id: '/_map'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_map/': {
+      id: '/_map/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof MapIndexRouteImport
+      parentRoute: typeof MapRoute
+    }
+    '/_map/directions': {
+      id: '/_map/directions'
+      path: '/directions'
+      fullPath: '/directions'
+      preLoaderRoute: typeof MapDirectionsRouteImport
+      parentRoute: typeof MapRoute
+    }
+    '/_map/offline': {
+      id: '/_map/offline'
+      path: '/offline'
+      fullPath: '/offline'
+      preLoaderRoute: typeof MapOfflineRouteImport
+      parentRoute: typeof MapRoute
+    }
+    '/_map/settings': {
+      id: '/_map/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof MapSettingsRouteImport
+      parentRoute: typeof MapRoute
+    }
+    '/_map/place/$id': {
+      id: '/_map/place/$id'
+      path: '/place/$id'
+      fullPath: '/place/$id'
+      preLoaderRoute: typeof MapPlaceIdRouteImport
+      parentRoute: typeof MapRoute
     }
   }
 }
 
+interface MapRouteChildren {
+  MapDirectionsRoute: typeof MapDirectionsRoute
+  MapOfflineRoute: typeof MapOfflineRoute
+  MapSettingsRoute: typeof MapSettingsRoute
+  MapIndexRoute: typeof MapIndexRoute
+  MapPlaceIdRoute: typeof MapPlaceIdRoute
+}
+
+const MapRouteChildren: MapRouteChildren = {
+  MapDirectionsRoute: MapDirectionsRoute,
+  MapOfflineRoute: MapOfflineRoute,
+  MapSettingsRoute: MapSettingsRoute,
+  MapIndexRoute: MapIndexRoute,
+  MapPlaceIdRoute: MapPlaceIdRoute,
+}
+
+const MapRouteWithChildren = MapRoute._addFileChildren(MapRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  MapRoute: MapRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
