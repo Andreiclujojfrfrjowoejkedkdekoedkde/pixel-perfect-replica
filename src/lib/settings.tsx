@@ -87,7 +87,7 @@ export function useSettings() {
 }
 
 export const env = {
-  mapillary: import.meta.env.VITE_MAPILLARY_TOKEN as string | undefined,
-  tomtom: import.meta.env.VITE_TOMTOM_KEY as string | undefined,
-  maptiler: import.meta.env.VITE_MAPTILER_KEY as string | undefined,
+  mapillary: import.meta.env["VITE_MAPILLARY_TOKEN"] as string | undefined,
+  tomtom: import.meta.env["VITE_TOMTOM_KEY"] as string | undefined,
+  maptiler: import.meta.env["VITE_MAPTILER_KEY"] as string | undefined,
 };

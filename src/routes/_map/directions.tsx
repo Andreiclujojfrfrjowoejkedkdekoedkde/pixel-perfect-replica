@@ -104,7 +104,7 @@ function Directions() {
 
   // Default the start to the user's location when available.
   useEffect(() => {
-    if (!stops[0].coord && position) setStops((s) => [{ label: "Your location", coord: [position.lon, position.lat], isMe: true }, ...s.slice(1)]);
+    if (!stops[0]?.coord && position) setStops((s) => [{ label: "Your location", coord: [position.lon, position.lat], isMe: true }, ...s.slice(1)]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [position]);
 
@@ -120,7 +120,7 @@ function Directions() {
       .then((r) => {
         if (!live) return;
         setRoutes(r, 0);
-        const all = r[0].coords;
+        const all = r[0]!.coords;
         const lons = all.map((c) => c[0]), lats = all.map((c) => c[1]);
         const pad = innerWidth < 768 ? { top: 80, bottom: innerHeight * 0.5 + 20, left: 30, right: 30 } : { top: 60, bottom: 60, left: innerWidth >= 768 ? 440 : 60, right: 80 };
         map?.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: pad, duration: 900 });
@@ -134,10 +134,10 @@ function Directions() {
   useEffect(() => () => { setRoutes([]); setNavigating(false); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (navigating && routes[activeRoute]) {
-    return <Guidance route={routes[activeRoute]} destination={stops[stops.length - 1].coord!} stops={stops.map((s) => s.coord!)} mode={mode} onEnd={() => setNavigating(false)} />;
+    return <Guidance route={routes[activeRoute]} destination={stops[stops.length - 1]!.coord!} stops={stops.map((s) => s.coord!)} mode={mode} onEnd={() => setNavigating(false)} />;
   }
 
-  const move = (i: number, d: number) => setStops((s) => { const n = [...s]; [n[i], n[i + d]] = [n[i + d], n[i]]; return n; });
+  const move = (i: number, d: number) => setStops((s) => { const n = [...s]; [n[i], n[i + d]] = [n[i + d]!, n[i]!]; return n; });
   const modes: { id: TravelMode; label: string; Icon: typeof Car }[] = [
     { id: "drive", label: "Drive", Icon: Car }, { id: "walk", label: "Walk", Icon: Footprints }, { id: "cycle", label: "Cycle", Icon: Bike },
   ];
@@ -169,7 +169,7 @@ function Directions() {
           </div>
         ))}
         {stops.length < 6 && (
-          <button onClick={() => setStops((s) => [...s.slice(0, -1), { label: "", coord: null }, s[s.length - 1]])} className="flex items-center gap-1.5 text-sm text-primary">
+          <button onClick={() => setStops((s) => [...s.slice(0, -1), { label: "", coord: null }, s[s.length - 1]!])} className="flex items-center gap-1.5 text-sm text-primary">
             <Plus strokeWidth={1.5} className="h-4 w-4" /> Add stop
           </button>
         )}

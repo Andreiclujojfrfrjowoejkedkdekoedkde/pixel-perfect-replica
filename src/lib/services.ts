@@ -124,7 +124,7 @@ export const valhalla: RoutingEngine = {
     const costing = opts.mode === "drive" ? "auto" : opts.mode === "walk" ? "pedestrian" : "bicycle";
     const co: Record<string, unknown> = {};
     if (costing === "auto") {
-      co.auto = {
+      co["auto"] = {
         use_tolls: opts.avoidTolls ? 0 : 0.5,
         use_highways: opts.avoidHighways ? 0 : 1,
         use_ferry: opts.avoidFerries ? 0 : 0.5,
