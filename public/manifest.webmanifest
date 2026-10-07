@@ -1,0 +1,30 @@
+{
+  "name": "Meridian — a living atlas of the world",
+  "short_name": "Meridian",
+  "description": "Search places, navigate, and take your maps offline with Meridian.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F1E9DA",
+  "theme_color": "#F1E9DA",
+  "categories": ["navigation", "travel", "maps"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Offline maps", "url": "/map/offline" },
+    { "name": "Settings", "url": "/settings" }
+  ]
+}

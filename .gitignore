@@ -20,6 +20,12 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Netlify
+.netlify/
+
+# Nitro build output for every preset we might target
+.output/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -93,25 +93,43 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html, body { height: 100%; overflow: hidden; }
+  * {
+    border-color: var(--color-border);
+  }
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
 }
 
-@utility font-display { font-family: var(--font-display); font-optical-sizing: auto; }
-@utility tnum { font-variant-numeric: tabular-nums; }
+@utility font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
 @utility smallcaps {
   font-variant-caps: all-small-caps;
   letter-spacing: 0.08em;
   font-weight: 600;
 }
-@utility hairline { border-color: var(--border); border-width: 0; border-top-width: 1px; }
+@utility hairline {
+  border-color: var(--border);
+  border-width: 0;
+  border-top-width: 1px;
+}
 
 /* ---------- Liquid glass ---------- */
 @utility glass {
@@ -137,7 +155,9 @@
       transparent 60%,
       var(--glass-rim)
     );
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
@@ -156,7 +176,10 @@
     pointer-events: none;
     z-index: 0;
   }
-  & > * { position: relative; z-index: 2; }
+  & > * {
+    position: relative;
+    z-index: 2;
+  }
 }
 
 .refract .glass {
@@ -165,19 +188,28 @@
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .glass, .refract .glass {
+  .glass,
+  .refract .glass {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     background: var(--card);
   }
 }
 
-@utility surface { background: var(--card); color: var(--card-foreground); }
+@utility surface {
+  background: var(--card);
+  color: var(--card-foreground);
+}
 
-@utility sheet-spring { transition: transform 420ms cubic-bezier(0.22, 1.25, 0.36, 1); }
+@utility sheet-spring {
+  transition: transform 420ms cubic-bezier(0.22, 1.25, 0.36, 1);
+}
 
 @media (prefers-reduced-motion: reduce) {
-  * { transition-duration: 1ms !important; animation-duration: 1ms !important; }
+  * {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
 }
 
 /* MapLibre chrome */
@@ -187,7 +219,9 @@
   font-family: var(--font-sans);
   font-size: 10px;
 }
-.maplibregl-ctrl-attrib a { color: var(--muted-foreground) !important; }
+.maplibregl-ctrl-attrib a {
+  color: var(--muted-foreground) !important;
+}
 .maplibregl-ctrl-scale {
   background: transparent !important;
   border: 1px solid var(--foreground) !important;
@@ -198,4 +232,260 @@
   font-size: 10px;
   letter-spacing: 0.06em;
 }
-.maplibregl-ctrl-bottom-left { margin-bottom: env(safe-area-inset-bottom); }
+.maplibregl-ctrl-bottom-left {
+  margin-bottom: env(safe-area-inset-bottom);
+}
+
+/* Heading-up vehicle puck */
+.vehicle-puck {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 3px 6px oklch(0.255 0.02 60 / 0.45));
+}
+
+/* ---------- Home screen: liquid backdrop ---------- */
+/* Warm paper base with a soft vertical warmth, so glass always has depth to
+   refract without the motion competing with the text. */
+.liquid-base {
+  background:
+    radial-gradient(120% 80% at 20% 0%, oklch(0.97 0.02 82 / 0.9), transparent 60%),
+    radial-gradient(100% 70% at 90% 100%, oklch(0.93 0.03 70 / 0.7), transparent 55%),
+    var(--background);
+}
+.dark .liquid-base {
+  background:
+    radial-gradient(120% 80% at 20% 0%, oklch(0.26 0.02 70 / 0.9), transparent 60%),
+    radial-gradient(100% 70% at 90% 100%, oklch(0.24 0.03 55 / 0.8), transparent 55%),
+    var(--background);
+}
+
+/* Three large, very soft shapes. Fewer and fainter than a busy mesh on
+   purpose: this should read as still water, not as a screensaver. */
+.liquid-blob {
+  position: absolute;
+  display: block;
+  border-radius: 46% 54% 52% 48% / 50% 48% 52% 50%;
+  filter: blur(90px);
+  will-change: transform;
+  opacity: 0.55;
+  transform: translate3d(0, 0, 0);
+}
+.dark .liquid-blob {
+  opacity: 0.42;
+}
+
+.liquid-a {
+  width: 78vmax;
+  height: 78vmax;
+  left: -26vmax;
+  top: -30vmax;
+  background: radial-gradient(
+    circle at 40% 40%,
+    oklch(0.76 0.11 55 / 0.6),
+    oklch(0.86 0.06 70 / 0.28) 58%,
+    transparent 74%
+  );
+  animation: liquid-drift-a 74s linear infinite;
+}
+.liquid-b {
+  width: 70vmax;
+  height: 70vmax;
+  right: -22vmax;
+  top: -14vmax;
+  background: radial-gradient(
+    circle at 58% 44%,
+    oklch(0.72 0.1 32 / 0.52),
+    oklch(0.84 0.07 62 / 0.24) 60%,
+    transparent 76%
+  );
+  animation: liquid-drift-b 92s linear infinite;
+}
+.liquid-c {
+  width: 66vmax;
+  height: 66vmax;
+  left: 12vmax;
+  bottom: -32vmax;
+  background: radial-gradient(
+    circle at 46% 56%,
+    oklch(0.8 0.08 92 / 0.5),
+    oklch(0.88 0.05 80 / 0.22) 58%,
+    transparent 76%
+  );
+  animation: liquid-drift-c 108s linear infinite;
+}
+
+@keyframes liquid-drift-a {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(10vmax, 7vmax, 0) scale(1.08) rotate(14deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+}
+@keyframes liquid-drift-b {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1.04) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-13vmax, 11vmax, 0) scale(0.95) rotate(-12deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.04) rotate(0deg);
+  }
+}
+@keyframes liquid-drift-c {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.97) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(12vmax, -12vmax, 0) scale(1.1) rotate(10deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(0.97) rotate(0deg);
+  }
+}
+
+/* One slow highlight travelling across, like light on water. */
+.liquid-sheen {
+  position: absolute;
+  inset: -20%;
+  background: linear-gradient(
+    104deg,
+    transparent 34%,
+    oklch(1 0 0 / 0.14) 47%,
+    oklch(1 0 0 / 0.05) 53%,
+    transparent 66%
+  );
+  animation: liquid-sheen 26s ease-in-out infinite;
+}
+.dark .liquid-sheen {
+  background: linear-gradient(
+    104deg,
+    transparent 34%,
+    oklch(1 0 0 / 0.05) 47%,
+    oklch(1 0 0 / 0.02) 53%,
+    transparent 66%
+  );
+}
+@keyframes liquid-sheen {
+  0%,
+  100% {
+    transform: translate3d(-14%, 0, 0);
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(14%, 0, 0);
+    opacity: 0;
+  }
+}
+
+/* Keeps the eye on the content, not the motion. */
+.liquid-vignette {
+  background: radial-gradient(
+    120% 90% at 50% 30%,
+    transparent 40%,
+    oklch(0.255 0.02 60 / 0.07) 100%
+  );
+}
+.dark .liquid-vignette {
+  background: radial-gradient(120% 90% at 50% 30%, transparent 40%, oklch(0 0 0 / 0.28) 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liquid-blob,
+  .liquid-sheen {
+    animation: none !important;
+    will-change: auto;
+  }
+}
+
+/* ---------- Home screen glass surfaces ---------- */
+/* Cards get a touch more tint and a crisper rim than the floating controls, so
+   a whole page of glass still reads as layers rather than one flat wash. */
+.surface-glass {
+  background: var(--glass-tint);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(18px) saturate(1.5);
+  box-shadow:
+    inset 0 1px 0 var(--glass-rim),
+    inset 0 0 26px var(--glass-shade),
+    0 16px 40px -18px oklch(0.255 0.02 60 / 0.4);
+}
+
+/* Primary action tile: lifts on hover and brightens its rim. */
+.tile {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 1rem;
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 260ms ease;
+}
+.tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(120% 90% at 30% 0%, oklch(1 0 0 / 0.2), transparent 60%);
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+.tile:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 var(--glass-rim),
+    inset 0 0 26px var(--glass-shade),
+    0 20px 44px -18px oklch(0.255 0.02 60 / 0.45);
+}
+.tile:hover::after {
+  opacity: 1;
+}
+.tile:active {
+  transform: translateY(0);
+}
+
+/* The single most important action on a screen. */
+.tile-primary {
+  background: linear-gradient(180deg, var(--primary), var(--primary-hover));
+  color: var(--primary-foreground);
+  border: 1px solid oklch(1 0 0 / 0.22);
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.3),
+    0 14px 30px -14px oklch(0.42 0.15 40 / 0.7);
+}
+.tile-primary:hover {
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.35),
+    0 20px 40px -14px oklch(0.42 0.15 40 / 0.8);
+}
+
+/* Small circular icon button used in headers. */
+.glass-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  transition:
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 200ms ease;
+}
+.glass-button:hover {
+  transform: translateY(-1px);
+  background-color: var(--secondary);
+}
+.glass-button:active {
+  transform: translateY(0);
+}

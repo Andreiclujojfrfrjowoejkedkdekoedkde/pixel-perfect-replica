@@ -26,7 +26,8 @@ export const location = {
           heading: p.coords.heading,
           timestamp: p.timestamp,
         }),
-      (e) => onErr?.(e.code === 1 ? "Location permission was denied." : "Could not get your location."),
+      (e) =>
+        onErr?.(e.code === 1 ? "Location permission was denied." : "Could not get your location."),
       { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 },
     );
     return () => navigator.geolocation.clearWatch(id);
@@ -65,7 +66,10 @@ export const storage = {
 
 export const network = {
   online(): boolean {
-    return typeof navigator === "undefined" ? true : navigator.onLine;
+    // Node exposes a `navigator` global with no meaningful onLine, so treat an
+    // undefined value as online rather than flipping the whole app to offline.
+    if (typeof navigator === "undefined") return true;
+    return navigator.onLine ?? true;
   },
   subscribe(cb: (online: boolean) => void): () => void {
     const on = () => cb(true);
@@ -87,6 +91,98 @@ export const tts = {
     u.volume = volume;
     u.lang = lang;
     speechSynthesis.speak(u);
+  },
+};
+
+/* ---------------- Speech recognition (dictation) ---------------- */
+
+type SpeechRecognitionLike = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onresult:
+    | ((e: {
+        resultIndex: number;
+        results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }>;
+      }) => void)
+    | null;
+  onerror: ((e: { error?: string }) => void) | null;
+  onend: (() => void) | null;
+};
+
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+
+/** Web Speech is Chromium/WebKit only; everything else reports "unsupported". */
+function recognitionCtor(): SpeechRecognitionCtor | null {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as {
+    SpeechRecognition?: SpeechRecognitionCtor;
+    webkitSpeechRecognition?: SpeechRecognitionCtor;
+  };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
+export const speech = {
+  supported(): boolean {
+    return recognitionCtor() !== null;
+  },
+  /** Dictate into a textarea-like input. Returns a stop function. */
+  dictate(handlers: {
+    onText: (text: string, final: boolean) => void;
+    onError?: (message: string) => void;
+    onEnd?: () => void;
+  }): () => void {
+    const { onText, onError, onEnd } = handlers;
+    const Ctor = recognitionCtor();
+    if (!Ctor) {
+      onError?.("Dictation is not supported in this browser.");
+      return () => {};
+    }
+    let rec: SpeechRecognitionLike;
+    try {
+      rec = new Ctor();
+    } catch {
+      onError?.("Dictation is not available.");
+      return () => {};
+    }
+    rec.lang = typeof navigator !== "undefined" ? navigator.language || "en-US" : "en-US";
+    rec.continuous = false;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    let finalText = "";
+    rec.onresult = (e) => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i]!;
+        if (r.isFinal) finalText += r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      onText((finalText + interim).trim(), !interim);
+    };
+    rec.onerror = (e) =>
+      onError?.(
+        e.error === "not-allowed" ? "Microphone permission was denied." : "Dictation stopped.",
+      );
+    rec.onend = () => {
+      onText(finalText.trim(), true);
+      onEnd?.();
+    };
+    try {
+      rec.start();
+    } catch {
+      onError?.("Dictation is already running.");
+    }
+    return () => {
+      try {
+        rec.abort();
+      } catch {
+        /* already stopped */
+      }
+    };
   },
 };
 
