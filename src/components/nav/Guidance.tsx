@@ -30,8 +30,8 @@ export function Guidance({ route: initial, destination, mode, onEnd }: { route: 
   useEffect(() => {
     const stop = location.watch(setPosition, setError);
     if (settings.keepScreenOn) keepAwake.on();
-    map?.easeTo({ pitch: 55, zoom: 17, duration: 800 });
-    return () => { stop(); keepAwake.off(); map?.easeTo({ pitch: 0, bearing: 0, duration: 600 }); };
+    try { map?.easeTo({ pitch: 55, zoom: 17, duration: 800 }); } catch { /* ignore */ }
+    return () => { stop(); keepAwake.off(); try { map?.easeTo({ pitch: 0, bearing: 0, duration: 600 }); } catch { /* map gone */ } };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
