@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { Feature, FeatureCollection } from "geojson";
 import { useNavigate } from "@tanstack/react-router";
 import type { GeoJSONSource, Map as MLMap } from "maplibre-gl";
 import { useMapState } from "./MapContext";
@@ -32,7 +33,6 @@ export function MapCanvas() {
         zoom: view.z,
         maxPitch: 70,
         attributionControl: { compact: true },
-        // @ts-expect-error not in all type versions
         canvasContextAttributes: { antialias: true },
       });
       map.addControl(new ml.ScaleControl({ maxWidth: 110, unit: settings.units === "imperial" ? "imperial" : "metric" }), "bottom-left");
@@ -46,7 +46,7 @@ export function MapCanvas() {
           return;
         }
         const f = map.queryRenderedFeatures(e.point, { layers: ["meridian-markers"].filter((l) => map.getLayer(l)) })[0];
-        if (f?.properties?.id) navigate({ to: "/place/$id", params: { id: f.properties.id } });
+        if (f?.properties?.["id"]) navigate({ to: "/place/$id", params: { id: String(f.properties["id"]) } });
       });
       mapRef.current = map;
       st.setMap(map);
@@ -74,13 +74,13 @@ export function MapCanvas() {
   useEffect(() => {
     const map = st.map;
     if (!map || !map.isStyleLoaded()) return;
-    const set = (id: string, data: GeoJSON.FeatureCollection) => {
+    const set = (id: string, data: FeatureCollection) => {
       const s = map.getSource(id) as GeoJSONSource | undefined;
       if (s) s.setData(data);
       else map.addSource(id, { type: "geojson", data });
     };
 
-    const lines: GeoJSON.Feature[] = st.routes.map((r, i) => ({
+    const lines: Feature[] = st.routes.map((r, i) => ({
       type: "Feature",
       properties: { active: i === st.activeRoute ? 1 : 0 },
       geometry: { type: "LineString", coordinates: r.coords },

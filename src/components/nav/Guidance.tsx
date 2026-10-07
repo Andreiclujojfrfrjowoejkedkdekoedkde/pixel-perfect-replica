@@ -40,10 +40,10 @@ export function Guidance({ route: initial, destination, mode, onEnd }: { route: 
     const me: [number, number] = [position.lon, position.lat];
     const { distance: off, index } = nearestOnLine(me, route.coords);
     let remaining = 0;
-    for (let i = index; i < route.coords.length - 1; i++) remaining += haversine(route.coords[i], route.coords[i + 1]);
-    const next = route.maneuvers.find((m) => m.beginIndex > index) ?? route.maneuvers[route.maneuvers.length - 1];
+    for (let i = index; i < route.coords.length - 1; i++) remaining += haversine(route.coords[i]!, route.coords[i + 1]!);
+    const next = route.maneuvers.find((m) => m.beginIndex > index) ?? route.maneuvers[route.maneuvers.length - 1]!;
     let toNext = 0;
-    for (let i = index; i < Math.min(next.beginIndex, route.coords.length - 1); i++) toNext += haversine(route.coords[i], route.coords[i + 1]);
+    for (let i = index; i < Math.min(next.beginIndex, route.coords.length - 1); i++) toNext += haversine(route.coords[i]!, route.coords[i + 1]!);
     const timeLeft = route.distance > 0 ? (remaining / route.distance) * route.duration : 0;
     return { off, index, remaining, next, toNext, timeLeft, me };
   }, [position, route]);
@@ -51,7 +51,7 @@ export function Guidance({ route: initial, destination, mode, onEnd }: { route: 
   // Camera follow, heading-up.
   useEffect(() => {
     if (!progress || !map) return;
-    const ahead = route.coords[Math.min(progress.index + 3, route.coords.length - 1)];
+    const ahead = route.coords[Math.min(progress.index + 3, route.coords.length - 1)]!;
     const bearing = position?.heading ?? (Math.atan2(ahead[0] - progress.me[0], ahead[1] - progress.me[1]) * 180) / Math.PI;
     map.easeTo({ center: progress.me, bearing, pitch: 55, duration: 900 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -74,7 +74,7 @@ export function Guidance({ route: initial, destination, mode, onEnd }: { route: 
     rerouting.current = true;
     if (settings.voice) tts.speak("Rerouting", settings.volume);
     valhalla.route([progress.me, destination], { mode, ...settings })
-      .then((r) => { setRoute(r[0]); setRoutes([r[0]]); })
+      .then((r) => { if (r[0]) { setRoute(r[0]); setRoutes([r[0]]); } })
       .catch(() => setError("Routing needs a connection."))
       .finally(() => { rerouting.current = false; });
     // eslint-disable-next-line react-hooks/exhaustive-deps
