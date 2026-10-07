@@ -20,6 +20,7 @@
 ## Done this round
 
 ### Home screen (`/`)
+
 The map moved to `/map` so `/` can be a real home screen: slow drifting liquid
 gradients behind liquid-glass cards, a search box, quick actions, and shortcuts
 you choose yourself. Shortcut targets (home, work, school, favourites) are set in
@@ -29,6 +30,7 @@ Settings and edited from the home screen via `?focus=`.
 `src/lib/places.ts`, the `liquid-blob` rules in `src/styles.css`.
 
 ### Search autocomplete
+
 One shared search core for the home screen and the map: your saved places, named
 places and recents match instantly and locally, then a debounced geocoder query
 runs with an abort signal and a sequence guard so a slow reply can never
@@ -38,6 +40,7 @@ input still works.
 `src/components/search/QuickSearch.tsx` (shared `useSearchSuggestions`).
 
 ### Nearby categories actually work
+
 The old category query asked Overpass for 60 results with no abort, no cache and
 no viewport reload, which is why the buttons felt dead. Now: 400 results,
 de-duplicated, cached per rounded bbox for ten minutes, aborted when the map
@@ -45,6 +48,7 @@ moves, re-run 700 ms after the map settles, with counts, distance sorting,
 per-category reload and explicit empty/error states. Twelve categories.
 
 ### Live navigation
+
 Vehicle arrow that turns with the compass, camera follow, live progress bar and
 percent complete, distance and time remaining, live ETA, off-route detection with
 a distinct "off the route" state, automatic rerouting behind a "Recalculating…"
@@ -55,12 +59,14 @@ manoeuvre types. Spoken guidance uses the language chosen in Settings.
 `src/components/nav/VehicleMarker.tsx`.
 
 ### Route preview
+
 The step list is collapsed to six steps with "Show all N steps", and each
 alternative shows its time and distance delta, toll status, motorway share and
 arrival time. Added a departure-time picker ("leave at 08:15"), nearest-neighbour
 stop optimisation, and charging stops along the route when an EV range is set.
 
 ### Vehicle, alerts, settings
+
 Car/van/truck profile with height, weight, axle weight and EV range. Speed camera
 and school zone warnings from OSM, ahead on the route only, always worded as
 "reported" because OSM coverage is uneven. Settings is now a full page with a
@@ -68,6 +74,7 @@ three-column desktop layout, sticky header, and sections for home-screen widgets
 saved places, lists, vehicle, voice language, alerts, trips and privacy.
 
 ### Bugs fixed along the way
+
 - Category POI query capped at 60 results with no abort or cache.
 - Drawn-shape tile download dropped edge tiles, leaving holes.
 - `areaOf` treated degrees as radians, so the km² cap was ~3000x too large.
@@ -85,6 +92,7 @@ saved places, lists, vehicle, voice language, alerts, trips and privacy.
 ## Still open
 
 ### Offline routing — the real gap
+
 Tiles and search work offline, but routing still needs the network. A genuine
 bundled engine means shipping an OSRM or GraphHopper WASM build plus regional
 PBF extracts, which is tens of megabytes per region and a separate data
@@ -94,12 +102,23 @@ they are driven so a repeat journey replays offline. Say which you want and it i
 a contained piece of work.
 
 ### Live traffic
+
 Needs a TomTom key (already in `.env.example`). Item 3 on the roadmap.
 
 ### Share ETA over a live link
+
 A static share link with destination and ETA is straightforward. A genuinely
-*live* link needs a backend that stores a session and polls it; that is new
+_live_ link needs a backend that stores a session and polls it; that is new
 server-side state and I would rather not fake it with the client's location.
+
+## Deploying
+
+Meridian builds to a Cloudflare Worker, not a static site: `.output/server/index.mjs`
+is the entry and `.output/public` is the static asset binding. Publish `.output`,
+not `dist/client` — there is no `dist/` and no `index.html`, because pages render
+per request. SSR is required for the hazard-classification server function and the
+Supabase auth middleware. `npm run build` ends with a check that prints these paths
+and fails loudly on incomplete output.
 
 ## Needs configuration
 
