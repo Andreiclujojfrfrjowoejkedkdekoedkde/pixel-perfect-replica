@@ -112,5 +112,9 @@ export function MapCanvas() {
     }
   }, [st.map, st.styleVersion, st.routes, st.activeRoute, st.markers, st.position, dark]);
 
-  return <div ref={el} className="absolute inset-0" role="application" aria-label="Map. Right-click or long-press to drop a pin." />;
+  return (
+    <div className="absolute inset-0">
+      <div ref={el} className="h-full w-full" role="application" aria-label="Map. Right-click or long-press to drop a pin." />
+    </div>
+  );
 }
