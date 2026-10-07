@@ -93,43 +93,25 @@
 }
 
 @layer base {
-  * {
-    border-color: var(--color-border);
-  }
-  html,
-  body {
-    height: 100%;
-    overflow: hidden;
-  }
+  * { border-color: var(--color-border); }
+  html, body { height: 100%; overflow: hidden; }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  :focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 2px;
-  }
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 }
 
-@utility font-display {
-  font-family: var(--font-display);
-  font-optical-sizing: auto;
-}
-@utility tnum {
-  font-variant-numeric: tabular-nums;
-}
+@utility font-display { font-family: var(--font-display); font-optical-sizing: auto; }
+@utility tnum { font-variant-numeric: tabular-nums; }
 @utility smallcaps {
   font-variant-caps: all-small-caps;
   letter-spacing: 0.08em;
   font-weight: 600;
 }
-@utility hairline {
-  border-color: var(--border);
-  border-width: 0;
-  border-top-width: 1px;
-}
+@utility hairline { border-color: var(--border); border-width: 0; border-top-width: 1px; }
 
 /* ---------- Liquid glass ---------- */
 @utility glass {
@@ -155,9 +137,7 @@
       transparent 60%,
       var(--glass-rim)
     );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
@@ -176,10 +156,7 @@
     pointer-events: none;
     z-index: 0;
   }
-  & > * {
-    position: relative;
-    z-index: 2;
-  }
+  & > * { position: relative; z-index: 2; }
 }
 
 .refract .glass {
@@ -188,146 +165,19 @@
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .glass,
-  .refract .glass {
+  .glass, .refract .glass {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     background: var(--card);
   }
 }
 
-@utility surface {
-  background: var(--card);
-  color: var(--card-foreground);
-}
+@utility surface { background: var(--card); color: var(--card-foreground); }
 
-@utility sheet-spring {
-  transition: transform 420ms cubic-bezier(0.22, 1.25, 0.36, 1);
-}
-
-/* ---------- Home screen liquid backdrop ---------- */
-.liquid-blob {
-  position: absolute;
-  display: block;
-  border-radius: 50%;
-  filter: blur(70px);
-  will-change: transform;
-  transform: translate3d(0, 0, 0);
-}
-
-.liquid-a {
-  width: 62vmax;
-  height: 62vmax;
-  left: -18vmax;
-  top: -22vmax;
-  background: radial-gradient(
-    circle at 35% 35%,
-    oklch(0.72 0.14 48 / 0.75),
-    oklch(0.82 0.09 62 / 0.35) 60%,
-    transparent 72%
-  );
-  animation: liquid-drift-a calc(46s / var(--t, 1)) linear infinite;
-}
-.liquid-b {
-  width: 54vmax;
-  height: 54vmax;
-  right: -16vmax;
-  top: -6vmax;
-  background: radial-gradient(
-    circle at 60% 40%,
-    oklch(0.68 0.13 30 / 0.7),
-    oklch(0.78 0.1 70 / 0.3) 62%,
-    transparent 74%
-  );
-  animation: liquid-drift-b calc(58s / var(--t, 1)) linear infinite;
-}
-.liquid-c {
-  width: 58vmax;
-  height: 58vmax;
-  left: 8vmax;
-  bottom: -28vmax;
-  background: radial-gradient(
-    circle at 45% 55%,
-    oklch(0.74 0.11 95 / 0.65),
-    oklch(0.84 0.07 80 / 0.3) 60%,
-    transparent 74%
-  );
-  animation: liquid-drift-c calc(66s / var(--t, 1)) linear infinite;
-}
-.liquid-d {
-  width: 40vmax;
-  height: 40vmax;
-  right: 4vmax;
-  bottom: -14vmax;
-  background: radial-gradient(circle at 50% 50%, oklch(0.63 0.12 55 / 0.55), transparent 68%);
-  animation: liquid-drift-d calc(52s / var(--t, 1)) linear infinite;
-}
-
-@keyframes liquid-drift-a {
-  0% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  33% {
-    transform: translate3d(14vmax, 8vmax, 0) scale(1.12);
-  }
-  66% {
-    transform: translate3d(4vmax, 20vmax, 0) scale(0.94);
-  }
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-@keyframes liquid-drift-b {
-  0% {
-    transform: translate3d(0, 0, 0) scale(1.05);
-  }
-  40% {
-    transform: translate3d(-18vmax, 14vmax, 0) scale(0.92);
-  }
-  70% {
-    transform: translate3d(-6vmax, 26vmax, 0) scale(1.1);
-  }
-  100% {
-    transform: translate3d(0, 0, 0) scale(1.05);
-  }
-}
-@keyframes liquid-drift-c {
-  0% {
-    transform: translate3d(0, 0, 0) scale(0.98);
-  }
-  45% {
-    transform: translate3d(16vmax, -16vmax, 0) scale(1.14);
-  }
-  100% {
-    transform: translate3d(0, 0, 0) scale(0.98);
-  }
-}
-@keyframes liquid-drift-d {
-  0% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-22vmax, -10vmax, 0) scale(1.18);
-  }
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
+@utility sheet-spring { transition: transform 420ms cubic-bezier(0.22, 1.25, 0.36, 1); }
 
 @media (prefers-reduced-motion: reduce) {
-  .liquid-blob {
-    animation: none;
-  }
-  .liquid-blob {
-    will-change: auto;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * {
-    transition-duration: 1ms !important;
-    animation-duration: 1ms !important;
-  }
+  * { transition-duration: 1ms !important; animation-duration: 1ms !important; }
 }
 
 /* MapLibre chrome */
@@ -337,9 +187,7 @@
   font-family: var(--font-sans);
   font-size: 10px;
 }
-.maplibregl-ctrl-attrib a {
-  color: var(--muted-foreground) !important;
-}
+.maplibregl-ctrl-attrib a { color: var(--muted-foreground) !important; }
 .maplibregl-ctrl-scale {
   background: transparent !important;
   border: 1px solid var(--foreground) !important;
@@ -350,14 +198,4 @@
   font-size: 10px;
   letter-spacing: 0.06em;
 }
-.maplibregl-ctrl-bottom-left {
-  margin-bottom: env(safe-area-inset-bottom);
-}
-
-/* Heading-up vehicle puck */
-.vehicle-puck {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  filter: drop-shadow(0 3px 6px oklch(0.255 0.02 60 / 0.45));
-}
+.maplibregl-ctrl-bottom-left { margin-bottom: env(safe-area-inset-bottom); }

@@ -12,15 +12,4 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
-  // Pin the Nitro target so the output layout does not depend on which machine or
-  // host happens to run the build. This project is server-rendered, and the
-  // OpenRouter hazard endpoint is a server function, so SSR cannot be dropped.
-  //
-  // netlify  -> static assets in dist/, serverless function in .netlify/functions-internal
-  // cloudflare-module -> worker entry in .output/server, assets bound from .output/public
-  //
-  // Swap to "cloudflare-module" if you deploy to Cloudflare Workers instead; then the
-  // publish target is the worker, not a static directory. `bun run build` prints which
-  // layout it produced.
-  nitro: { preset: process.env["MERIDIAN_NITRO_PRESET"] || "netlify" },
 });

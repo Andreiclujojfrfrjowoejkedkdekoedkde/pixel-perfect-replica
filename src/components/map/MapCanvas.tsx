@@ -25,52 +25,28 @@ export function MapCanvas() {
     (async () => {
       const ml = await import("maplibre-gl");
       if (cancelled || !el.current) return;
-      const view = storage.get<{ c: [number, number]; z: number }>("view", {
-        c: [23.59, 46.77],
-        z: 12,
-      });
+      const view = storage.get<{ c: [number, number]; z: number }>("view", { c: [23.59, 46.77], z: 12 });
       map = new ml.Map({
         container: el.current,
-        style: buildStyle(st.mode, {
-          dark,
-          buildings3d: settings.buildings3d,
-          labelScale: settings.labelScale,
-          earthLabels: settings.earthLabels,
-        }),
+        style: buildStyle(st.mode, { dark, buildings3d: settings.buildings3d, labelScale: settings.labelScale, earthLabels: settings.earthLabels }),
         center: view.c,
         zoom: view.z,
         maxPitch: 70,
         attributionControl: { compact: true },
         canvasContextAttributes: { antialias: true },
       });
-      map.addControl(
-        new ml.ScaleControl({
-          maxWidth: 110,
-          unit: settings.units === "imperial" ? "imperial" : "metric",
-        }),
-        "bottom-left",
-      );
-      map.on("moveend", () =>
-        storage.set("view", { c: map.getCenter().toArray(), z: map.getZoom() }),
-      );
+      map.addControl(new ml.ScaleControl({ maxWidth: 110, unit: settings.units === "imperial" ? "imperial" : "metric" }), "bottom-left");
+      map.on("moveend", () => storage.set("view", { c: map.getCenter().toArray(), z: map.getZoom() }));
       map.on("style.load", () => st.bumpStyle());
-      map.on("contextmenu", (e) =>
-        navigate({
-          to: "/map/place/$id",
-          params: { id: `@${e.lngLat.lat.toFixed(6)},${e.lngLat.lng.toFixed(6)}` },
-        }),
-      );
+      map.on("contextmenu", (e) => navigate({ to: "/place/$id", params: { id: `@${e.lngLat.lat.toFixed(6)},${e.lngLat.lng.toFixed(6)}` } }));
       map.on("click", async (e) => {
         if (modeRef.current === "street" && env.mapillary) {
           const id = await mapillaryImageNear(e.lngLat.lng, e.lngLat.lat, env.mapillary);
           if (id) st.setStreetImage(id);
           return;
         }
-        const f = map.queryRenderedFeatures(e.point, {
-          layers: ["meridian-markers"].filter((l) => map.getLayer(l)),
-        })[0];
-        if (f?.properties?.["id"])
-          navigate({ to: "/map/place/$id", params: { id: String(f.properties["id"]) } });
+        const f = map.queryRenderedFeatures(e.point, { layers: ["meridian-markers"].filter((l) => map.getLayer(l)) })[0];
+        if (f?.properties?.["id"]) navigate({ to: "/place/$id", params: { id: String(f.properties["id"]) } });
       });
       mapRef.current = map;
       st.setMap(map);
@@ -87,15 +63,7 @@ export function MapCanvas() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    map.setStyle(
-      buildStyle(st.mode, {
-        dark,
-        buildings3d: settings.buildings3d,
-        labelScale: settings.labelScale,
-        earthLabels: settings.earthLabels,
-      }),
-      { diff: false },
-    );
+    map.setStyle(buildStyle(st.mode, { dark, buildings3d: settings.buildings3d, labelScale: settings.labelScale, earthLabels: settings.earthLabels }), { diff: false });
     if (st.mode === "3d") map.easeTo({ pitch: 60, duration: 900 });
     else if (st.mode !== "earth" && !st.navigating) map.easeTo({ pitch: 0, duration: 600 });
     if (st.mode === "earth" && map.getZoom() > 5) map.easeTo({ zoom: 3, duration: 1200 });
@@ -120,115 +88,33 @@ export function MapCanvas() {
     lines.sort((a, b) => a.properties!["active"] - b.properties!["active"]);
     set("meridian-route", { type: "FeatureCollection", features: lines });
     if (!map.getLayer("meridian-route-case")) {
-      map.addLayer({
-        id: "meridian-route-case",
-        type: "line",
-        source: "meridian-route",
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": dark ? "#1B1612" : "#FBF6EC",
-          "line-width": ["interpolate", ["linear"], ["zoom"], 8, 6, 16, 14],
-        },
-      });
-      map.addLayer({
-        id: "meridian-route-line",
-        type: "line",
-        source: "meridian-route",
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": [
-            "case",
-            ["==", ["get", "active"], 1],
-            routeColor(dark),
-            altRouteColor(dark),
-          ],
-          "line-width": ["interpolate", ["linear"], ["zoom"], 8, 3.5, 16, 9],
-        },
-      });
+      map.addLayer({ id: "meridian-route-case", type: "line", source: "meridian-route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": dark ? "#1B1612" : "#FBF6EC", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 6, 16, 14] } });
+      map.addLayer({ id: "meridian-route-line", type: "line", source: "meridian-route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["case", ["==", ["get", "active"], 1], routeColor(dark), altRouteColor(dark)], "line-width": ["interpolate", ["linear"], ["zoom"], 8, 3.5, 16, 9] } });
     }
 
     set("meridian-markers", {
       type: "FeatureCollection",
-      features: st.markers.map((m) => ({
-        type: "Feature",
-        properties: { id: m.id, name: m.name },
-        geometry: { type: "Point", coordinates: [m.lon, m.lat] },
-      })),
+      features: st.markers.map((m) => ({ type: "Feature", properties: { id: m.id, name: m.name }, geometry: { type: "Point", coordinates: [m.lon, m.lat] } })),
     });
     if (!map.getLayer("meridian-markers")) {
-      map.addLayer({
-        id: "meridian-markers",
-        type: "circle",
-        source: "meridian-markers",
-        paint: {
-          "circle-radius": 7,
-          "circle-color": routeColor(dark),
-          "circle-stroke-color": dark ? "#1B1612" : "#FBF6EC",
-          "circle-stroke-width": 2.5,
-        },
-      });
-      map.addLayer({
-        id: "meridian-marker-labels",
-        type: "symbol",
-        source: "meridian-markers",
-        layout: {
-          "text-field": ["get", "name"],
-          "text-font": ["Noto Sans Bold"],
-          "text-size": 12,
-          "text-offset": [0, 1.3],
-          "text-anchor": "top",
-          "text-optional": true,
-        },
-        paint: {
-          "text-color": dark ? "#EDE3D1" : "#2A2119",
-          "text-halo-color": dark ? "#1B1612" : "#F1E9DA",
-          "text-halo-width": 1.5,
-        },
-      });
+      map.addLayer({ id: "meridian-markers", type: "circle", source: "meridian-markers", paint: { "circle-radius": 7, "circle-color": routeColor(dark), "circle-stroke-color": dark ? "#1B1612" : "#FBF6EC", "circle-stroke-width": 2.5 } });
+      map.addLayer({ id: "meridian-marker-labels", type: "symbol", source: "meridian-markers", layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-offset": [0, 1.3], "text-anchor": "top", "text-optional": true }, paint: { "text-color": dark ? "#EDE3D1" : "#2A2119", "text-halo-color": dark ? "#1B1612" : "#F1E9DA", "text-halo-width": 1.5 } });
     }
 
     const p = st.position;
     set("meridian-me", {
       type: "FeatureCollection",
-      features: p
-        ? [
-            {
-              type: "Feature",
-              properties: { acc: p.accuracy },
-              geometry: { type: "Point", coordinates: [p.lon, p.lat] },
-            },
-          ]
-        : [],
+      features: p ? [{ type: "Feature", properties: { acc: p.accuracy }, geometry: { type: "Point", coordinates: [p.lon, p.lat] } }] : [],
     });
     if (!map.getLayer("meridian-me")) {
-      map.addLayer({
-        id: "meridian-me-halo",
-        type: "circle",
-        source: "meridian-me",
-        paint: { "circle-radius": 18, "circle-color": routeColor(dark), "circle-opacity": 0.15 },
-      });
-      map.addLayer({
-        id: "meridian-me",
-        type: "circle",
-        source: "meridian-me",
-        paint: {
-          "circle-radius": 7,
-          "circle-color": routeColor(dark),
-          "circle-stroke-color": "#FBF6EC",
-          "circle-stroke-width": 3,
-        },
-      });
+      map.addLayer({ id: "meridian-me-halo", type: "circle", source: "meridian-me", paint: { "circle-radius": 18, "circle-color": routeColor(dark), "circle-opacity": 0.15 } });
+      map.addLayer({ id: "meridian-me", type: "circle", source: "meridian-me", paint: { "circle-radius": 7, "circle-color": routeColor(dark), "circle-stroke-color": "#FBF6EC", "circle-stroke-width": 3 } });
     }
   }, [st.map, st.styleVersion, st.routes, st.activeRoute, st.markers, st.position, dark]);
 
   return (
     <div className="absolute inset-0">
-      <div
-        ref={el}
-        className="h-full w-full"
-        role="application"
-        aria-label="Map. Right-click or long-press to drop a pin."
-      />
+      <div ref={el} className="h-full w-full" role="application" aria-label="Map. Right-click or long-press to drop a pin." />
     </div>
   );
 }
