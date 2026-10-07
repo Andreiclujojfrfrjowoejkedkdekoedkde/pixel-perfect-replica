@@ -1,0 +1,116 @@
+import { useEffect, useRef } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import type { GeoJSONSource, Map as MLMap } from "maplibre-gl";
+import { useMapState } from "./MapContext";
+import { useSettings, env } from "@/lib/settings";
+import { buildStyle, routeColor, altRouteColor } from "@/lib/mapStyle";
+import { mapillaryImageNear } from "@/lib/services";
+import { storage } from "@/lib/platform";
+
+// Single map canvas for the whole app. maplibre-gl is imported dynamically so
+// it never runs during server rendering.
+export function MapCanvas() {
+  const el = useRef<HTMLDivElement>(null);
+  const st = useMapState();
+  const { settings, dark } = useSettings();
+  const navigate = useNavigate();
+  const mapRef = useRef<MLMap | null>(null);
+  const modeRef = useRef(st.mode);
+  modeRef.current = st.mode;
+
+  useEffect(() => {
+    let cancelled = false;
+    let map: MLMap;
+    (async () => {
+      const ml = await import("maplibre-gl");
+      if (cancelled || !el.current) return;
+      const view = storage.get<{ c: [number, number]; z: number }>("view", { c: [23.59, 46.77], z: 12 });
+      map = new ml.Map({
+        container: el.current,
+        style: buildStyle(st.mode, { dark, buildings3d: settings.buildings3d, labelScale: settings.labelScale, earthLabels: settings.earthLabels }),
+        center: view.c,
+        zoom: view.z,
+        maxPitch: 70,
+        attributionControl: { compact: true },
+        // @ts-expect-error not in all type versions
+        canvasContextAttributes: { antialias: true },
+      });
+      map.addControl(new ml.ScaleControl({ maxWidth: 110, unit: settings.units === "imperial" ? "imperial" : "metric" }), "bottom-left");
+      map.on("moveend", () => storage.set("view", { c: map.getCenter().toArray(), z: map.getZoom() }));
+      map.on("style.load", () => st.bumpStyle());
+      map.on("contextmenu", (e) => navigate({ to: "/place/$id", params: { id: `@${e.lngLat.lat.toFixed(6)},${e.lngLat.lng.toFixed(6)}` } }));
+      map.on("click", async (e) => {
+        if (modeRef.current === "street" && env.mapillary) {
+          const id = await mapillaryImageNear(e.lngLat.lng, e.lngLat.lat, env.mapillary);
+          if (id) st.setStreetImage(id);
+          return;
+        }
+        const f = map.queryRenderedFeatures(e.point, { layers: ["meridian-markers"].filter((l) => map.getLayer(l)) })[0];
+        if (f?.properties?.id) navigate({ to: "/place/$id", params: { id: f.properties.id } });
+      });
+      mapRef.current = map;
+      st.setMap(map);
+    })();
+    return () => {
+      cancelled = true;
+      map?.remove();
+      st.setMap(null);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Restyle when mode/theme/options change.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.setStyle(buildStyle(st.mode, { dark, buildings3d: settings.buildings3d, labelScale: settings.labelScale, earthLabels: settings.earthLabels }), { diff: false });
+    if (st.mode === "3d") map.easeTo({ pitch: 60, duration: 900 });
+    else if (st.mode !== "earth" && !st.navigating) map.easeTo({ pitch: 0, duration: 600 });
+    if (st.mode === "earth" && map.getZoom() > 5) map.easeTo({ zoom: 3, duration: 1200 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [st.mode, dark, settings.buildings3d, settings.labelScale, settings.earthLabels]);
+
+  // Overlays: routes, markers, user position. Re-added after each style load.
+  useEffect(() => {
+    const map = st.map;
+    if (!map || !map.isStyleLoaded()) return;
+    const set = (id: string, data: GeoJSON.FeatureCollection) => {
+      const s = map.getSource(id) as GeoJSONSource | undefined;
+      if (s) s.setData(data);
+      else map.addSource(id, { type: "geojson", data });
+    };
+
+    const lines: GeoJSON.Feature[] = st.routes.map((r, i) => ({
+      type: "Feature",
+      properties: { active: i === st.activeRoute ? 1 : 0 },
+      geometry: { type: "LineString", coordinates: r.coords },
+    }));
+    lines.sort((a, b) => a.properties!.active - b.properties!.active);
+    set("meridian-route", { type: "FeatureCollection", features: lines });
+    if (!map.getLayer("meridian-route-case")) {
+      map.addLayer({ id: "meridian-route-case", type: "line", source: "meridian-route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": dark ? "#1B1612" : "#FBF6EC", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 6, 16, 14] } });
+      map.addLayer({ id: "meridian-route-line", type: "line", source: "meridian-route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["case", ["==", ["get", "active"], 1], routeColor(dark), altRouteColor(dark)], "line-width": ["interpolate", ["linear"], ["zoom"], 8, 3.5, 16, 9] } });
+    }
+
+    set("meridian-markers", {
+      type: "FeatureCollection",
+      features: st.markers.map((m) => ({ type: "Feature", properties: { id: m.id, name: m.name }, geometry: { type: "Point", coordinates: [m.lon, m.lat] } })),
+    });
+    if (!map.getLayer("meridian-markers")) {
+      map.addLayer({ id: "meridian-markers", type: "circle", source: "meridian-markers", paint: { "circle-radius": 7, "circle-color": routeColor(dark), "circle-stroke-color": dark ? "#1B1612" : "#FBF6EC", "circle-stroke-width": 2.5 } });
+      map.addLayer({ id: "meridian-marker-labels", type: "symbol", source: "meridian-markers", layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-offset": [0, 1.3], "text-anchor": "top", "text-optional": true }, paint: { "text-color": dark ? "#EDE3D1" : "#2A2119", "text-halo-color": dark ? "#1B1612" : "#F1E9DA", "text-halo-width": 1.5 } });
+    }
+
+    const p = st.position;
+    set("meridian-me", {
+      type: "FeatureCollection",
+      features: p ? [{ type: "Feature", properties: { acc: p.accuracy }, geometry: { type: "Point", coordinates: [p.lon, p.lat] } }] : [],
+    });
+    if (!map.getLayer("meridian-me")) {
+      map.addLayer({ id: "meridian-me-halo", type: "circle", source: "meridian-me", paint: { "circle-radius": 18, "circle-color": routeColor(dark), "circle-opacity": 0.15 } });
+      map.addLayer({ id: "meridian-me", type: "circle", source: "meridian-me", paint: { "circle-radius": 7, "circle-color": routeColor(dark), "circle-stroke-color": "#FBF6EC", "circle-stroke-width": 3 } });
+    }
+  }, [st.map, st.styleVersion, st.routes, st.activeRoute, st.markers, st.position, dark]);
+
+  return <div ref={el} className="absolute inset-0" role="application" aria-label="Map. Right-click or long-press to drop a pin." />;
+}
