@@ -1,16 +1,26 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Search, X, Clock, Bookmark, MapPin, Settings as Cog } from "lucide-react";
+import { Search, X, Clock, Bookmark, MapPin, Settings as Cog, CloudOff } from "lucide-react";
 import { useMapState } from "@/components/map/MapContext";
 import { photonSearch, type Place } from "@/lib/services";
 import { useLibrary, library } from "@/lib/library";
 import { fmtDistance, haversine, parseCoords } from "@/lib/format";
 import { useSettings } from "@/lib/settings";
+import { network } from "@/lib/platform";
+import { offlineResults, useOfflineSearch } from "@/lib/offlineSearch";
 
 function Highlight({ text, q }: { text: string; q: string }) {
   const i = q ? text.toLowerCase().indexOf(q.toLowerCase()) : -1;
   if (i < 0) return <>{text}</>;
-  return <>{text.slice(0, i)}<mark className="bg-transparent font-semibold text-primary">{text.slice(i, i + q.length)}</mark>{text.slice(i + q.length)}</>;
+  return (
+    <>
+      {text.slice(0, i)}
+      <mark className="bg-transparent font-semibold text-primary">
+        {text.slice(i, i + q.length)}
+      </mark>
+      {text.slice(i + q.length)}
+    </>
+  );
 }
 
 export const SearchBar = forwardRef<HTMLInputElement>(function SearchBar(_, ref) {
@@ -22,21 +32,52 @@ export const SearchBar = forwardRef<HTMLInputElement>(function SearchBar(_, ref)
   const { map, position } = useMapState();
   const { saved, recent } = useLibrary();
   const { settings } = useSettings();
+  const offline = useOfflineSearch();
   const navigate = useNavigate();
   const wrap = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!q.trim() || parseCoords(q)) { setResults([]); return; }
-    const ac = new AbortController();
-    const t = setTimeout(() => {
-      const c = map ? (map.getCenter().toArray() as [number, number]) : [0, 0] as [number, number];
-      photonSearch(q, c, ac.signal).then((r) => { setResults(r); setError(null); }).catch((e) => { if (e.name !== "AbortError") setError(e.message); });
-    }, 150);
-    return () => { clearTimeout(t); ac.abort(); };
-  }, [q, map]);
+  const origin = useMemo<[number, number] | null>(() => {
+    if (position) return [position.lon, position.lat];
+    const c = map?.getCenter().toArray();
+    return c ? [c[0], c[1]] : null;
+  }, [position, map]);
+  // The device index answers first when there is no connection or we are standing
+  // inside a downloaded area; otherwise the live geocoder stays authoritative.
+  const useLocal = useMemo(() => offline.shouldUse(q), [offline, q]);
+  const localResults = useMemo(
+    () => (offline.places && useLocal ? offlineResults(offline.places, q, origin) : []),
+    [offline.places, useLocal, q, origin],
+  );
 
   useEffect(() => {
-    const h = (e: MouseEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
+    if (!q.trim() || parseCoords(q) || useLocal) {
+      setResults([]);
+      return;
+    }
+    const ac = new AbortController();
+    const t = setTimeout(() => {
+      const c = map
+        ? (map.getCenter().toArray() as [number, number])
+        : ([0, 0] as [number, number]);
+      photonSearch(q, c, ac.signal)
+        .then((r) => {
+          setResults(r);
+          setError(null);
+        })
+        .catch((e) => {
+          if (e.name !== "AbortError") setError(e.message);
+        });
+    }, 150);
+    return () => {
+      clearTimeout(t);
+      ac.abort();
+    };
+  }, [q, map, useLocal]);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
@@ -44,18 +85,41 @@ export const SearchBar = forwardRef<HTMLInputElement>(function SearchBar(_, ref)
   const ql = q.toLowerCase();
   const groups = useMemo(() => {
     const coord = parseCoords(q);
-    const g: { label: string; icon: typeof MapPin; items: Place[] }[] = [];
-    if (coord) g.push({ label: "Coordinates", icon: MapPin, items: [{ id: `@${coord[1]},${coord[0]}`, name: `${coord[1]}, ${coord[0]}`, subtitle: "Go to this point", kind: "Point", lon: coord[0], lat: coord[1] }] });
+    const g: { label: string; icon: typeof MapPin; items: Place[]; offline?: boolean }[] = [];
+    if (coord)
+      g.push({
+        label: "Coordinates",
+        icon: MapPin,
+        items: [
+          {
+            id: `@${coord[1]},${coord[0]}`,
+            name: `${coord[1]}, ${coord[0]}`,
+            subtitle: "Go to this point",
+            kind: "Point",
+            lon: coord[0],
+            lat: coord[1],
+          },
+        ],
+      });
     const s = saved.filter((p) => !q || p.name.toLowerCase().includes(ql));
     const r = recent.filter((p) => !q || p.name.toLowerCase().includes(ql));
     if (s.length) g.push({ label: "Saved", icon: Bookmark, items: s.slice(0, 4) });
     if (r.length) g.push({ label: "Recent", icon: Clock, items: r.slice(0, q ? 3 : 6) });
-    const places = results.filter((p) => p.kind !== "Address");
-    const addresses = results.filter((p) => p.kind === "Address");
-    if (places.length) g.push({ label: "Places", icon: MapPin, items: places });
-    if (addresses.length) g.push({ label: "Addresses", icon: MapPin, items: addresses });
+    if (localResults.length) {
+      g.push({
+        label: network.online() ? "Offline area" : "Offline",
+        icon: CloudOff,
+        items: localResults,
+        offline: true,
+      });
+    } else {
+      const places = results.filter((p) => p.kind !== "Address");
+      const addresses = results.filter((p) => p.kind === "Address");
+      if (places.length) g.push({ label: "Places", icon: MapPin, items: places });
+      if (addresses.length) g.push({ label: "Addresses", icon: MapPin, items: addresses });
+    }
     return g;
-  }, [q, ql, saved, recent, results]);
+  }, [q, ql, saved, recent, results, localResults]);
   const flat = groups.flatMap((g) => g.items);
 
   const choose = (p: Place) => {
@@ -66,8 +130,6 @@ export const SearchBar = forwardRef<HTMLInputElement>(function SearchBar(_, ref)
     navigate({ to: "/place/$id", params: { id: p.id } });
   };
 
-  const origin: [number, number] | null = position ? [position.lon, position.lat] : map ? (map.getCenter().toArray() as [number, number]) : null;
-
   return (
     <div ref={wrap} className="relative w-full">
       <div className="glass flex h-12 items-center gap-2 rounded-2xl px-3">
@@ -75,30 +137,73 @@ export const SearchBar = forwardRef<HTMLInputElement>(function SearchBar(_, ref)
         <input
           ref={ref}
           value={q}
-          onChange={(e) => { setQ(e.target.value); setOpen(true); setCursor(0); }}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setOpen(true);
+            setCursor(0);
+          }}
           onFocus={() => setOpen(true)}
           onKeyDown={(e) => {
-            if (e.key === "ArrowDown") { e.preventDefault(); setCursor((c) => Math.min(c + 1, flat.length - 1)); }
-            else if (e.key === "ArrowUp") { e.preventDefault(); setCursor((c) => Math.max(c - 1, 0)); }
-            else if (e.key === "Enter" && flat[cursor]) choose(flat[cursor]);
-            else if (e.key === "Escape") { setOpen(false); (e.target as HTMLInputElement).blur(); }
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setCursor((c) => Math.min(c + 1, flat.length - 1));
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setCursor((c) => Math.max(c - 1, 0));
+            } else if (e.key === "Enter" && flat[cursor]) choose(flat[cursor]);
+            else if (e.key === "Escape") {
+              setOpen(false);
+              (e.target as HTMLInputElement).blur();
+            }
           }}
-          placeholder="Search places, addresses, coordinates"
+          placeholder={
+            network.online()
+              ? "Search places, addresses, coordinates"
+              : "Search offline places and addresses"
+          }
           aria-label="Search"
           role="combobox"
           aria-expanded={open}
           aria-controls="search-results"
           className="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
         />
-        {q && <button aria-label="Clear search" onClick={() => { setQ(""); setResults([]); }} className="text-muted-foreground hover:text-foreground"><X strokeWidth={1.5} className="h-5 w-5" /></button>}
-        <button aria-label="Settings" onClick={() => navigate({ to: "/settings" })} className="text-muted-foreground hover:text-foreground"><Cog strokeWidth={1.5} className="h-5 w-5" /></button>
+        {q && (
+          <button
+            aria-label="Clear search"
+            onClick={() => {
+              setQ("");
+              setResults([]);
+            }}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X strokeWidth={1.5} className="h-5 w-5" />
+          </button>
+        )}
+        <button
+          aria-label="Settings"
+          onClick={() => navigate({ to: "/settings" })}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <Cog strokeWidth={1.5} className="h-5 w-5" />
+        </button>
       </div>
       {open && (groups.length > 0 || error) && (
-        <div id="search-results" role="listbox" className="surface absolute left-0 right-0 top-14 z-40 max-h-[60vh] overflow-y-auto rounded-2xl border py-2 shadow-xl">
+        <div
+          id="search-results"
+          role="listbox"
+          className="surface absolute left-0 right-0 top-14 z-40 max-h-[60vh] overflow-y-auto rounded-2xl border py-2 shadow-xl"
+        >
           {error && <p className="px-4 py-2 text-sm text-muted-foreground">{error}</p>}
           {groups.map((g) => (
             <div key={g.label}>
-              <div className="smallcaps px-4 pb-1 pt-2 text-[11px] text-muted-foreground">{g.label}</div>
+              <div className="smallcaps flex items-center gap-1.5 px-4 pb-1 pt-2 text-[11px] text-muted-foreground">
+                {g.label}
+                {g.offline && (
+                  <span className="rounded-full border px-1.5 py-px text-[9px] normal-case tracking-normal">
+                    Offline
+                  </span>
+                )}
+              </div>
               {g.items.map((p) => {
                 const idx = flat.indexOf(p);
                 return (
@@ -110,17 +215,34 @@ export const SearchBar = forwardRef<HTMLInputElement>(function SearchBar(_, ref)
                     onClick={() => choose(p)}
                     className={`flex w-full items-start gap-3 px-4 py-2 text-left ${idx === cursor ? "bg-secondary" : ""}`}
                   >
-                    <g.icon strokeWidth={1.5} className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                    <g.icon
+                      strokeWidth={1.5}
+                      className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                    />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm"><Highlight text={p.name} q={q} /></span>
-                      <span className="block truncate text-xs text-muted-foreground">{p.kind}{p.subtitle ? ` · ${p.subtitle}` : ""}</span>
+                      <span className="block truncate text-sm">
+                        <Highlight text={p.name} q={q} />
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {p.kind}
+                        {p.subtitle ? ` · ${p.subtitle}` : ""}
+                      </span>
                     </span>
-                    {origin && <span className="tnum shrink-0 text-xs text-muted-foreground">{fmtDistance(haversine(origin, [p.lon, p.lat]), settings.units)}</span>}
+                    {origin && (
+                      <span className="tnum shrink-0 text-xs text-muted-foreground">
+                        {fmtDistance(haversine(origin, [p.lon, p.lat]), settings.units)}
+                      </span>
+                    )}
                   </button>
                 );
               })}
             </div>
           ))}
+          {!network.online() && (
+            <p className="px-4 py-2 text-xs text-muted-foreground">
+              Offline: showing downloaded areas only.
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -20,6 +20,7 @@ export type Settings = {
   avoidFerries: boolean;
   avoidUnpaved: boolean;
   speedTolerance: number; // km/h over limit before red
+  postedLimits: boolean; // show OSM maxspeed signs along the route
   keepScreenOn: boolean;
   autoNight: boolean;
   leftHanded: boolean;
@@ -42,6 +43,7 @@ export const defaultSettings: Settings = {
   avoidFerries: false,
   avoidUnpaved: false,
   speedTolerance: 5,
+  postedLimits: true,
   keepScreenOn: true,
   autoNight: true,
   leftHanded: false,
@@ -50,6 +52,9 @@ export const defaultSettings: Settings = {
 
 type Ctx = { settings: Settings; update: (p: Partial<Settings>) => void; dark: boolean };
 const SettingsCtx = createContext<Ctx | null>(null);
+
+export type SettingsMeta = { updatedAt: string; syncedAt: string | null };
+const SETTINGS_META = "settingsmeta";
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
@@ -70,10 +75,24 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
 
+  // Another device changed settings: adopt the synced copy without clobbering it.
+  useEffect(() => {
+    const onRemote = () =>
+      setSettings({ ...defaultSettings, ...storage.get<Partial<Settings>>("settings", {}) });
+    addEventListener("meridian:settings-remote", onRemote);
+    return () => removeEventListener("meridian:settings-remote", onRemote);
+  }, []);
+
   const update = (p: Partial<Settings>) =>
     setSettings((s) => {
       const n = { ...s, ...p };
       storage.set("settings", n);
+      // Stamp the change so the sync engine knows this device is ahead.
+      storage.set(SETTINGS_META, {
+        updatedAt: new Date().toISOString(),
+        syncedAt: storage.get<SettingsMeta>(SETTINGS_META, { updatedAt: "", syncedAt: null })
+          .syncedAt,
+      });
       return n;
     });
 

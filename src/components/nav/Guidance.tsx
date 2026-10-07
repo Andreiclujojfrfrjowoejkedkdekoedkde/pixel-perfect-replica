@@ -1,10 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, CornerUpLeft, CornerUpRight, ArrowUpLeft, ArrowUpRight, RotateCcw, Flag, MapPin } from "lucide-react";
+import {
+  ArrowUp,
+  CornerUpLeft,
+  CornerUpRight,
+  ArrowUpLeft,
+  ArrowUpRight,
+  RotateCcw,
+  Flag,
+  MapPin,
+  RefreshCw,
+} from "lucide-react";
 import { useMapState } from "@/components/map/MapContext";
 import { useSettings, type TravelMode } from "@/lib/settings";
 import { valhalla, type Route } from "@/lib/services";
 import { location, tts, keepAwake } from "@/lib/platform";
 import { fmtDistance, fmtDuration, fmtClock, haversine, nearestOnLine } from "@/lib/format";
+import { useSpeedLimits } from "./SpeedLimitsContext";
+import { SpeedSignBadge, SpeedSignCaption } from "./SpeedSign";
+import { LIMIT_UNIT_LABEL, formatLimit } from "@/lib/speedLimits";
 
 // Valhalla maneuver types -> line icon
 function ManeuverIcon({ type, className }: { type: number; className?: string }) {
@@ -19,9 +32,28 @@ function ManeuverIcon({ type, className }: { type: number; className?: string })
   return <ArrowUp {...p} />;
 }
 
-export function Guidance({ route: initial, destination, mode, onEnd }: { route: Route; destination: [number, number]; stops: [number, number][]; mode: TravelMode; onEnd: () => void }) {
+export function Guidance({
+  route: initial,
+  destination,
+  mode,
+  onEnd,
+}: {
+  route: Route;
+  destination: [number, number];
+  stops: [number, number][];
+  mode: TravelMode;
+  onEnd: () => void;
+}) {
   const { map, position, setPosition, setRoutes } = useMapState();
   const { settings } = useSettings();
+  const {
+    state: limitState,
+    currentKmh,
+    currentRoad,
+    aheadKmh,
+    canRetry,
+    retry,
+  } = useSpeedLimits();
   const [route, setRoute] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const spoken = useRef<string>("");
@@ -31,7 +63,11 @@ export function Guidance({ route: initial, destination, mode, onEnd }: { route: 
     const stop = location.watch(setPosition, setError);
     if (settings.keepScreenOn) keepAwake.on();
     map?.easeTo({ pitch: 55, zoom: 17, duration: 800 });
-    return () => { stop(); keepAwake.off(); map?.easeTo({ pitch: 0, bearing: 0, duration: 600 }); };
+    return () => {
+      stop();
+      keepAwake.off();
+      map?.easeTo({ pitch: 0, bearing: 0, duration: 600 });
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -40,10 +76,14 @@ export function Guidance({ route: initial, destination, mode, onEnd }: { route: 
     const me: [number, number] = [position.lon, position.lat];
     const { distance: off, index } = nearestOnLine(me, route.coords);
     let remaining = 0;
-    for (let i = index; i < route.coords.length - 1; i++) remaining += haversine(route.coords[i]!, route.coords[i + 1]!);
-    const next = route.maneuvers.find((m) => m.beginIndex > index) ?? route.maneuvers[route.maneuvers.length - 1]!;
+    for (let i = index; i < route.coords.length - 1; i++)
+      remaining += haversine(route.coords[i]!, route.coords[i + 1]!);
+    const next =
+      route.maneuvers.find((m) => m.beginIndex > index) ??
+      route.maneuvers[route.maneuvers.length - 1]!;
     let toNext = 0;
-    for (let i = index; i < Math.min(next.beginIndex, route.coords.length - 1); i++) toNext += haversine(route.coords[i]!, route.coords[i + 1]!);
+    for (let i = index; i < Math.min(next.beginIndex, route.coords.length - 1); i++)
+      toNext += haversine(route.coords[i]!, route.coords[i + 1]!);
     const timeLeft = route.distance > 0 ? (remaining / route.distance) * route.duration : 0;
     return { off, index, remaining, next, toNext, timeLeft, me };
   }, [position, route]);
@@ -52,7 +92,9 @@ export function Guidance({ route: initial, destination, mode, onEnd }: { route: 
   useEffect(() => {
     if (!progress || !map) return;
     const ahead = route.coords[Math.min(progress.index + 3, route.coords.length - 1)]!;
-    const bearing = position?.heading ?? (Math.atan2(ahead[0] - progress.me[0], ahead[1] - progress.me[1]) * 180) / Math.PI;
+    const bearing =
+      position?.heading ??
+      (Math.atan2(ahead[0] - progress.me[0], ahead[1] - progress.me[1]) * 180) / Math.PI;
     map.easeTo({ center: progress.me, bearing, pitch: 55, duration: 900 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress?.me[0], progress?.me[1]]);
@@ -64,7 +106,12 @@ export function Guidance({ route: initial, destination, mode, onEnd }: { route: 
     const k = `${progress.next.beginIndex}-${bucket}`;
     if (bucket && spoken.current !== k) {
       spoken.current = k;
-      tts.speak(bucket === "now" ? progress.next.instruction : `In ${fmtDistance(progress.toNext, settings.units)}, ${progress.next.verbal ?? progress.next.instruction}`, settings.volume);
+      tts.speak(
+        bucket === "now"
+          ? progress.next.instruction
+          : `In ${fmtDistance(progress.toNext, settings.units)}, ${progress.next.verbal ?? progress.next.instruction}`,
+        settings.volume,
+      );
     }
   }, [progress, settings.voice, settings.units, settings.volume]);
 
@@ -73,37 +120,119 @@ export function Guidance({ route: initial, destination, mode, onEnd }: { route: 
     if (!progress || progress.off < 50 || rerouting.current) return;
     rerouting.current = true;
     if (settings.voice) tts.speak("Rerouting", settings.volume);
-    valhalla.route([progress.me, destination], { mode, ...settings })
-      .then((r) => { if (r[0]) { setRoute(r[0]); setRoutes([r[0]]); } })
+    valhalla
+      .route([progress.me, destination], { mode, ...settings })
+      .then((r) => {
+        if (r[0]) {
+          setRoute(r[0]);
+          setRoutes([r[0]]);
+        }
+      })
       .catch(() => setError("Routing needs a connection."))
-      .finally(() => { rerouting.current = false; });
+      .finally(() => {
+        rerouting.current = false;
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress?.off]);
+
+  // Say the posted limit when it drops, so the driver hears it without watching.
+  const announced = useRef<string | null>(null);
+  useEffect(() => {
+    if (!settings.voice || limitState !== "ready" || !progress) return;
+    const k = String(currentKmh ?? "none");
+    if (announced.current === null) {
+      announced.current = k;
+      return;
+    } // first read: show it, do not read it out
+    if (announced.current === k) return;
+    announced.current = k;
+    if (currentKmh == null) return; // an unknown stretch gets the neutral sign, not a spoken guess
+    tts.speak(
+      `Speed limit ${formatLimit(currentKmh, settings.units)} ${LIMIT_UNIT_LABEL[settings.units]}`,
+      settings.volume,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentKmh, limitState, settings.voice, settings.units, settings.volume, progress != null]);
 
   const arrived = progress && progress.remaining < 25;
   const eta = progress ? new Date(Date.now() + progress.timeLeft * 1000) : null;
 
   return (
     <>
-      <div className="absolute inset-x-3 z-40 md:left-4 md:right-auto md:w-[420px]" style={{ top: "calc(env(safe-area-inset-top) + 12px)" }} aria-live="polite">
+      <div
+        className="absolute inset-x-3 z-40 md:left-4 md:right-auto md:w-[420px]"
+        style={{ top: "calc(env(safe-area-inset-top) + 12px)" }}
+        aria-live="polite"
+      >
         <div className="glass flex items-center gap-4 rounded-2xl p-4">
-          <ManeuverIcon type={arrived ? 4 : progress?.next.type ?? 1} className="h-12 w-12 shrink-0 text-primary" />
-          <div className="min-w-0">
-            <div className="tnum text-3xl font-semibold leading-none">{arrived ? "Arrived" : progress ? fmtDistance(progress.toNext, settings.units) : "Locating"}</div>
-            <div className="mt-1 truncate font-display text-lg">{arrived ? "You have reached your destination" : progress?.next.street || progress?.next.instruction || "Waiting for GPS"}</div>
+          <ManeuverIcon
+            type={arrived ? 4 : (progress?.next.type ?? 1)}
+            className="h-12 w-12 shrink-0 text-primary"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="tnum text-3xl font-semibold leading-none">
+              {arrived
+                ? "Arrived"
+                : progress
+                  ? fmtDistance(progress.toNext, settings.units)
+                  : "Locating"}
+            </div>
+            <div className="mt-1 truncate font-display text-lg">
+              {arrived
+                ? "You have reached your destination"
+                : progress?.next.street || progress?.next.instruction || "Waiting for GPS"}
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-col items-center gap-1">
+            <SpeedSignBadge limitKmh={currentKmh} units={settings.units} state={limitState} />
+            <SpeedSignCaption
+              limitKmh={currentKmh}
+              units={settings.units}
+              state={limitState}
+              road={currentRoad}
+            />
+            {canRetry && (
+              <button
+                onClick={retry}
+                className="flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                <RefreshCw strokeWidth={1.5} className="h-3 w-3" /> Retry
+              </button>
+            )}
+            {!canRetry &&
+              limitState === "ready" &&
+              currentKmh != null &&
+              aheadKmh != null &&
+              aheadKmh !== currentKmh && (
+                <span className="tnum text-[10px] text-muted-foreground">
+                  then {formatLimit(aheadKmh, settings.units)}
+                </span>
+              )}
           </div>
         </div>
         {error && <div className="glass mt-2 rounded-xl px-3 py-2 text-sm">{error}</div>}
       </div>
-      <div className="absolute inset-x-3 bottom-3 z-40 md:left-4 md:right-auto md:w-[420px]" style={{ marginBottom: "env(safe-area-inset-bottom)" }}>
+      <div
+        className="absolute inset-x-3 bottom-3 z-40 md:left-4 md:right-auto md:w-[420px]"
+        style={{ marginBottom: "env(safe-area-inset-bottom)" }}
+      >
         <div className="glass flex items-center gap-4 rounded-2xl px-5 py-3">
           <div className="flex-1">
-            <div className="tnum font-display text-2xl text-primary">{eta ? fmtClock(eta, settings.timeFormat) : "--:--"}</div>
+            <div className="tnum font-display text-2xl text-primary">
+              {eta ? fmtClock(eta, settings.timeFormat) : "--:--"}
+            </div>
             <div className="tnum text-xs text-muted-foreground">
-              {progress ? `${fmtDuration(progress.timeLeft)} · ${fmtDistance(progress.remaining, settings.units)}` : `${fmtDuration(route.duration)} · ${fmtDistance(route.distance, settings.units)}`}
+              {progress
+                ? `${fmtDuration(progress.timeLeft)} · ${fmtDistance(progress.remaining, settings.units)}`
+                : `${fmtDuration(route.duration)} · ${fmtDistance(route.distance, settings.units)}`}
             </div>
           </div>
-          <button onClick={onEnd} className="rounded-xl bg-destructive px-5 py-2.5 font-medium text-destructive-foreground">End</button>
+          <button
+            onClick={onEnd}
+            className="rounded-xl bg-destructive px-5 py-2.5 font-medium text-destructive-foreground"
+          >
+            End
+          </button>
         </div>
       </div>
     </>
