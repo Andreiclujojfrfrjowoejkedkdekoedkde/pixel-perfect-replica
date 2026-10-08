@@ -64,11 +64,11 @@ export async function downloadRegion(name: string, bbox: Bbox, signal?: AbortSig
   for (const e of data.elements) {
     if (e.type === "node" && e.lat != null && e.lon != null) nodes[String(e.id)] = [e.lon, e.lat];
     const t = e.tags ?? {};
-    if (e.type === "way" && t.highway && e.nodes) roads.push({ id: e.id, nodes: e.nodes, tags: t });
+    if (e.type === "way" && t["highway"] && e.nodes) roads.push({ id: e.id, nodes: e.nodes, tags: t });
     const lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon;
-    if (lat == null || lon == null || !(t.amenity || t.tourism || t.shop || t["addr:housenumber"])) continue;
-    const kind = t.amenity ?? t.tourism ?? t.shop ?? "Address";
-    places.push({ id: `${e.type === "node" ? "N" : e.type === "way" ? "W" : "R"}${e.id}`, name: t.name ?? t.brand ?? ([t["addr:street"], t["addr:housenumber"]].filter(Boolean).join(" ") || kind.replaceAll("_", " ")), subtitle: [t["addr:street"], t["addr:city"]].filter(Boolean).join(", "), kind: kind.replaceAll("_", " "), lat, lon });
+    if (lat == null || lon == null || !(t["amenity"] || t["tourism"] || t["shop"] || t["addr:housenumber"])) continue;
+    const kind = t["amenity"] ?? t["tourism"] ?? t["shop"] ?? "Address";
+    places.push({ id: `${e.type === "node" ? "N" : e.type === "way" ? "W" : "R"}${e.id}`, name: t["name"] ?? t["brand"] ?? ([t["addr:street"], t["addr:housenumber"]].filter(Boolean).join(" ") || kind.replaceAll("_", " ")), subtitle: [t["addr:street"], t["addr:city"]].filter(Boolean).join(", "), kind: kind.replaceAll("_", " "), lat, lon });
   }
   if (!roads.length) throw new Error("No roads were found. Choose another area.");
   const region: OfflineRegion = { id: bbox.join(","), name, bbox, date: new Date().toISOString(), places: [...new Map(places.map(p => [p.id, p])).values()], nodes, roads };
@@ -100,24 +100,24 @@ export const offlineRouter: RoutingEngine = {
     if (!region) throw new Error("Download roads for an area containing all your stops before routing offline.");
     const graph = createGraph<[number, number], { length: number; name: string }>();
     for (const road of region.roads) {
-      const t = road.tags, h = t.highway;
-      if (["private", "no"].includes(t.access ?? "") || t.area === "yes" || t.construction || ["construction", "proposed"].includes(h ?? "")) continue;
-      const access = opts.mode === "drive" ? t.motor_vehicle ?? t.motorcar ?? t.vehicle : opts.mode === "cycle" ? t.bicycle : t.foot;
+      const t = road.tags, h = t["highway"];
+      if (["private", "no"].includes(t["access"] ?? "") || t["area"] === "yes" || t["construction"] || ["construction", "proposed"].includes(h ?? "")) continue;
+      const access = opts.mode === "drive" ? t["motor_vehicle"] ?? t["motorcar"] ?? t["vehicle"] : opts.mode === "cycle" ? t["bicycle"] : t["foot"];
       if (["no", "private"].includes(access ?? "")) continue;
       if (opts.mode === "drive" && ["footway", "path", "pedestrian", "cycleway", "steps", "bridleway"].includes(h ?? "") && access !== "yes") continue;
       if (opts.mode !== "drive" && ["motorway", "motorway_link"].includes(h ?? "")) continue;
       if (opts.mode === "cycle" && h === "steps") continue;
       if (opts.avoidHighways && ["motorway", "motorway_link", "trunk", "trunk_link"].includes(h ?? "")) continue;
-      if (opts.avoidTolls && t.toll === "yes") continue;
-      if (opts.avoidUnpaved && ["gravel", "dirt", "ground", "unpaved", "sand"].includes(t.surface ?? "")) continue;
-      const one = opts.mode === "walk" ? "no" : opts.mode === "cycle" && t["oneway:bicycle"] === "no" ? "no" : t.oneway ?? (t.junction === "roundabout" || h === "motorway" ? "yes" : "no");
+      if (opts.avoidTolls && t["toll"] === "yes") continue;
+      if (opts.avoidUnpaved && ["gravel", "dirt", "ground", "unpaved", "sand"].includes(t["surface"] ?? "")) continue;
+      const one = opts.mode === "walk" ? "no" : opts.mode === "cycle" && t["oneway:bicycle"] === "no" ? "no" : t["oneway"] ?? (t["junction"] === "roundabout" || h === "motorway" ? "yes" : "no");
       for (let i = 0; i < road.nodes.length - 1; i++) {
         const a = road.nodes[i], b = road.nodes[i+1];
         if (a == null || b == null) continue;
         const pa = region.nodes[String(a)], pb = region.nodes[String(b)];
         if (!pa || !pb) continue;
         graph.addNode(a, pa); graph.addNode(b, pb);
-        const edge = { length: haversine(pa,pb), name: t.name ?? "Continue on this road" };
+        const edge = { length: haversine(pa,pb), name: t["name"] ?? "Continue on this road" };
         if (one !== "-1") graph.addLink(a,b,edge);
         if (!["yes", "1", "true"].includes(one)) graph.addLink(b,a,edge);
       }
