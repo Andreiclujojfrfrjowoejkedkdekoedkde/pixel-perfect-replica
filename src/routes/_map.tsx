@@ -11,7 +11,8 @@ import { SpeedPill } from "@/components/nav/SpeedPill";
 import { NetworkBadge } from "@/components/shell/NetworkBadge";
 import { GlassDefs } from "@/components/glass/GlassDefs";
 import { useSettings } from "@/lib/settings";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, MapPin, X } from "lucide-react";
 
 export const Route = createFileRoute("/_map")({
   component: MapLayout,
@@ -41,7 +42,7 @@ function Shell() {
   const bp = useBreakpoint();
   const matchRoute = useMatchRoute();
   const navigate = useNavigate();
-  const { map, navigating } = useMapState();
+  const { map, navigating, picking, cancelPick } = useMapState();
   const searchRef = useRef<HTMLInputElement>(null);
   const [layersOpen, setLayersOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -73,50 +74,58 @@ function Shell() {
       {!navigating && <Controls layersOpen={layersOpen} setLayersOpen={setLayersOpen} />}
       <SpeedPill />
       <StreetViewer />
+      {picking && <div className="pointer-events-none absolute inset-x-3 top-4 z-50 flex justify-center">
+        <div className="glass pointer-events-auto flex items-center gap-3 rounded-xl px-4 py-3">
+          <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />
+          <span className="text-sm">Choose {picking} on the map</span>
+          <Button variant="ghost" size="icon" onClick={cancelPick} title="Cancel selection" aria-label="Cancel selection"><X /></Button>
+        </div>
+      </div>}
+
 
       {bp === "sm" && (
         <>
-          {!navigating && (
+          {!navigating && !picking && (
             <div className="absolute inset-x-3 z-30" style={{ top: "calc(env(safe-area-inset-top) + 12px)" }}>
               <SearchBar ref={searchRef} />
             </div>
           )}
-          {!navigating && (
-            <BottomSheet snap={isHome ? "peek" : isSettings ? "full" : "half"} title="Results and details">
+          {(
+            <div className={picking || navigating ? "hidden" : "contents"}><BottomSheet snap={isHome ? "peek" : isSettings ? "full" : "half"} title="Results and details">
               {isHome ? <HomePanel /> : <Outlet />}
-            </BottomSheet>
+            </BottomSheet></div>
           )}
-          {navigating && <Outlet />}
+
         </>
       )}
 
       {bp !== "sm" && (
         <>
-          {!navigating && (
+          {(
             <aside
-              className={`absolute bottom-4 left-4 top-4 z-30 flex flex-col gap-3 transition-transform duration-300 ${bp === "xl" ? "w-[400px]" : "w-[360px]"} ${collapsed ? "-translate-x-[calc(100%+1rem)]" : ""}`}
+              className={`absolute bottom-4 left-4 top-4 z-30 flex flex-col gap-3 transition-transform duration-300 ${bp === "xl" ? "w-[400px]" : "w-[360px]"} ${collapsed ? "-translate-x-[calc(100%+1rem)]" : ""} ${picking || navigating ? "hidden" : ""}`}
             >
               <SearchBar ref={searchRef} />
               <div className="glass min-h-0 flex-1 overflow-hidden rounded-2xl">
                 <div className="surface h-full overflow-y-auto">{panelContent}</div>
               </div>
               {bp === "xl" && (
-                <button
+                <Button variant="ghost"
                   onClick={() => setCollapsed(!collapsed)}
                   aria-label={collapsed ? "Show panel" : "Hide panel"}
                   className="glass absolute -right-9 top-16 flex h-12 w-7 items-center justify-center rounded-r-xl"
                 >
                   {collapsed ? <ChevronRight strokeWidth={1.5} className="h-4 w-4" /> : <ChevronLeft strokeWidth={1.5} className="h-4 w-4" />}
-                </button>
+                </Button>
               )}
             </aside>
           )}
-          {bp === "xl" && isPlace && !navigating && (
+          {bp === "xl" && isPlace && !navigating && !picking && (
             <aside className="glass absolute bottom-4 right-20 top-4 z-30 w-[380px] overflow-hidden rounded-2xl">
               <div className="surface h-full overflow-y-auto"><Outlet /></div>
             </aside>
           )}
-          {navigating && <Outlet />}
+
         </>
       )}
     </main>

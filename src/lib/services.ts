@@ -1,3 +1,4 @@
+import { overpass, localCategory, offlineRouter } from "./offline-data";
 import { decodePolyline } from "./format";
 import type { TravelMode } from "./settings";
 
@@ -52,9 +53,7 @@ export const CATEGORIES = [
 export async function categorySearch(tag: string, bbox: [number, number, number, number], signal?: AbortSignal): Promise<Place[]> {
   const [w, s, e, n] = bbox;
   const q = `[out:json][timeout:20];nwr${tag}(${s},${w},${n},${e});out center tags 60;`;
-  const r = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: new URLSearchParams({ data: q }), signal: signal ?? null });
-  if (!r.ok) throw new Error("Could not load places in this area.");
-  const j = await r.json();
+  const j = await overpass(q.replace("out center tags 60", "out center tags 300"), signal);
   return (j.elements ?? []).map((el: any) => {
     const t = el.tags ?? {};
     const lat = el.lat ?? el.center?.lat;
@@ -66,7 +65,7 @@ export async function categorySearch(tag: string, bbox: [number, number, number,
       kind: humanKind(undefined, t.amenity ?? t.tourism),
       lon, lat,
     } satisfies Place;
-  }).filter((p: Place) => p.lat != null);
+  }).filter((p: Place) => Number.isFinite(p.lat) && Number.isFinite(p.lon));
 }
 
 export type PlaceDetails = Place & {
@@ -110,7 +109,7 @@ export async function placeDetails(id: string): Promise<PlaceDetails> {
 /* ---------------- Routing ---------------- */
 
 export type Maneuver = { instruction: string; verbal?: string; type: number; street: string; length: number; time: number; beginIndex: number };
-export type Route = { coords: [number, number][]; distance: number; duration: number; maneuvers: Maneuver[] };
+export type Route = { coords: [number, number][]; distance: number; duration: number; maneuvers: Maneuver[]; offline?: boolean };
 export type RouteOptions = { mode: TravelMode; avoidTolls: boolean; avoidHighways: boolean; avoidFerries: boolean; avoidUnpaved: boolean; language?: string };
 
 export interface RoutingEngine {
@@ -172,4 +171,20 @@ export async function mapillaryImageNear(lon: number, lat: number, token: string
   if (!r.ok) return null;
   const j = await r.json();
   return j.data?.[0]?.id ?? null;
+}
+
+export const routingEngine: RoutingEngine = {
+  name: "Meridian",
+  async route(stops, opts) {
+    if (!navigator.onLine) return offlineRouter.route(stops, opts);
+    try { return await valhalla.route(stops, opts); }
+    catch (error) { try { return await offlineRouter.route(stops, opts); } catch { throw error; } }
+  },
+};
+export async function nearbyCategory(id: string, tag: string, bbox: [number, number, number, number], signal?: AbortSignal) {
+  const center: [number, number] = [(bbox[0]+bbox[2])/2, (bbox[1]+bbox[3])/2];
+  const local = await localCategory(id, center).catch(() => null);
+  if (local && !navigator.onLine) return local;
+  try { return await categorySearch(tag,bbox,signal); }
+  catch (e) { if (local?.length) return local; throw e; }
 }

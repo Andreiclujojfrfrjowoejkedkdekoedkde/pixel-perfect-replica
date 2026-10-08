@@ -33,16 +33,8 @@ export const location = {
   },
   once(): Promise<Position> {
     return new Promise((resolve, reject) => {
-      const stop = location.watch(
-        (p) => {
-          stop();
-          resolve(p);
-        },
-        (e) => {
-          stop();
-          reject(new Error(e));
-        },
-      );
+      if (typeof navigator === "undefined" || !navigator.geolocation) { reject(new Error("Location is not available on this device.")); return; }
+      navigator.geolocation.getCurrentPosition(p => resolve({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy, speed: p.coords.speed, heading: p.coords.heading, timestamp: p.timestamp }), e => reject(new Error(e.code === 1 ? "Location permission was denied." : "Could not get your location.")), { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
     });
   },
 };

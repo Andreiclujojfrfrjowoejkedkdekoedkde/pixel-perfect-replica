@@ -15,3 +15,7 @@
 - Map colours in `src/lib/mapStyle.ts` are literal hex because MapLibre paints outside CSS; UI colours stay in `src/styles.css` tokens.
 - Device features go through `src/lib/platform.ts`; routing goes through the `RoutingEngine` interface. Why: swap in Capacitor plugins and offline engines without touching features.
 - Never simulate traffic-signal phases; show a green state only from real provider data.
+
+- Regional offline roads and POIs live in IndexedDB; route selection uses the RoutingEngine interface and ngraph A* for disconnected operation. Why: keep global datasets off devices and avoid invented offline routes.
+- Map point selection is owned by MapContext; directions stays mounted during selection and trips, with guidance portalled to the map overlay. Why: hiding planning must not reset navigation state or clip driving controls.
+- Navigation progress snaps to road segments and camera following pauses after manual gestures. Why: sparse vertices must not cause false reroutes or fight user map movement.
