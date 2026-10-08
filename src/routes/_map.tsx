@@ -90,20 +90,20 @@ function Shell() {
               <SearchBar ref={searchRef} />
             </div>
           )}
-          {!navigating && (
-            <div className={picking ? "hidden" : "contents"}><BottomSheet snap={isHome ? "peek" : isSettings ? "full" : "half"} title="Results and details">
+          {(
+            <div className={picking || navigating ? "hidden" : "contents"}><BottomSheet snap={isHome ? "peek" : isSettings ? "full" : "half"} title="Results and details">
               {isHome ? <HomePanel /> : <Outlet />}
             </BottomSheet></div>
           )}
-          {navigating && <Outlet />}
+
         </>
       )}
 
       {bp !== "sm" && (
         <>
-          {!navigating && (
+          {(
             <aside
-              className={`absolute bottom-4 left-4 top-4 z-30 flex flex-col gap-3 transition-transform duration-300 ${bp === "xl" ? "w-[400px]" : "w-[360px]"} ${collapsed ? "-translate-x-[calc(100%+1rem)]" : ""} ${picking ? "hidden" : ""}`}
+              className={`absolute bottom-4 left-4 top-4 z-30 flex flex-col gap-3 transition-transform duration-300 ${bp === "xl" ? "w-[400px]" : "w-[360px]"} ${collapsed ? "-translate-x-[calc(100%+1rem)]" : ""} ${picking || navigating ? "hidden" : ""}`}
             >
               <SearchBar ref={searchRef} />
               <div className="glass min-h-0 flex-1 overflow-hidden rounded-2xl">
@@ -125,7 +125,7 @@ function Shell() {
               <div className="surface h-full overflow-y-auto"><Outlet /></div>
             </aside>
           )}
-          {navigating && <Outlet />}
+
         </>
       )}
     </main>

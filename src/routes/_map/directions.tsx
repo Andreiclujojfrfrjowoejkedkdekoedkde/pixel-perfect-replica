@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
@@ -153,8 +154,9 @@ function Directions() {
 
   const selected = routes[activeRoute];
   const destination = stops[stops.length - 1]?.coord;
-  if (navigating && selected && destination) {
-    return <Guidance route={selected} destination={destination} stops={stops.flatMap(s => s.coord ? [s.coord] : [])} mode={mode} onEnd={() => setNavigating(false)} />;
+  const navigationHost = map?.getContainer().parentElement;
+  if (navigating && selected && destination && navigationHost) {
+    return createPortal(<Guidance route={selected} destination={destination} stops={stops.flatMap(s => s.coord ? [s.coord] : [])} mode={mode} onEnd={() => setNavigating(false)} />, navigationHost);
   }
 
   const move = (i: number, d: number) => setStops((s) => { const n = [...s]; const a=n[i], b=n[i+d]; if (a && b) { n[i]=b; n[i+d]=a; } return n; });
