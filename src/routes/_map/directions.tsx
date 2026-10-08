@@ -1,13 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { Car, Footprints, Bike, ArrowUp, ArrowDown, Plus, X, Crosshair, Play } from "lucide-react";
+import { Car, Footprints, Bike, ArrowUp, ArrowDown, Plus, X, Crosshair, Play, MapPin } from "lucide-react";
 import { useMapState } from "@/components/map/MapContext";
 import { Guidance } from "@/components/nav/Guidance";
 import { useSettings, type TravelMode } from "@/lib/settings";
-import { valhalla, photonSearch, type Place } from "@/lib/services";
+import { routingEngine, photonSearch, type Place } from "@/lib/services";
 import { fmtDistance, fmtDuration, parseCoords } from "@/lib/format";
-import { network } from "@/lib/platform";
+import { location } from "@/lib/platform";
+import { Button } from "@/components/ui/button";
 
 const search = z.object({
   to: z.string().optional(),
@@ -35,13 +36,14 @@ type Stop = { label: string; coord: [number, number] | null; isMe?: boolean };
 
 function toStop(s?: string, name?: string): Stop {
   const c = s ? parseCoords(s) : null;
-  return { label: name ?? (c ? s! : ""), coord: c };
+  return { label: name ?? (c ? s ?? "" : ""), coord: c };
 }
 
 function StopInput({ stop, onChange, placeholder, index }: { stop: Stop; onChange: (s: Stop) => void; placeholder: string; index: number }) {
   const [q, setQ] = useState(stop.label);
   const [opts, setOpts] = useState<Place[]>([]);
-  const { map, position, setPosition } = useMapState();
+  const { map, position, setPosition, beginPick, cancelPick } = useMapState();
+  const [locationError, setLocationError] = useState<string | null>(null);
   useEffect(() => setQ(stop.label), [stop.label]);
   useEffect(() => {
     if (!q || q === stop.label) { setOpts([]); return; }
@@ -54,9 +56,9 @@ function StopInput({ stop, onChange, placeholder, index }: { stop: Stop; onChang
   }, [q, stop.label, map]);
 
   const useMe = async () => {
-    const { location } = await import("@/lib/platform");
     const p = position ?? (await location.once().catch(() => null));
-    if (p) { setPosition(p); onChange({ label: "Your location", coord: [p.lon, p.lat], isMe: true }); }
+    if (p) { setLocationError(null); setPosition(p); onChange({ label: "Your location", coord: [p.lon, p.lat], isMe: true }); map?.easeTo({ center: [p.lon, p.lat], zoom: 16, duration: 800 }); }
+    else setLocationError("Allow location access, or choose a point on the map.");
   };
 
   return (
@@ -68,22 +70,24 @@ function StopInput({ stop, onChange, placeholder, index }: { stop: Stop; onChang
           onChange={(e) => {
             setQ(e.target.value);
             const c = parseCoords(e.target.value);
-            if (c) onChange({ label: e.target.value, coord: c });
+            onChange({ label: e.target.value, coord: c });
           }}
           placeholder={placeholder}
           aria-label={placeholder}
           className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />
-        <button onClick={useMe} aria-label="Use my location" className="text-muted-foreground hover:text-primary"><Crosshair strokeWidth={1.5} className="h-4 w-4" /></button>
+        <Button variant="ghost" size="icon" onClick={useMe} title="Use my location" aria-label={`Use my location for ${placeholder}`} className="h-8 w-8 shrink-0"><Crosshair strokeWidth={1.5} /></Button>
+        <Button variant="ghost" size="icon" title="Choose on map" aria-label={`Choose ${placeholder.toLowerCase()} on map`} className="h-8 w-8 shrink-0" onClick={() => beginPick(placeholder.toLowerCase(), c => { onChange({ label: `${c[1].toFixed(5)}, ${c[0].toFixed(5)}`, coord: c }); cancelPick(); })}><MapPin strokeWidth={1.5} /></Button>
       </div>
+      {locationError && <p className="py-1 text-xs text-destructive">{locationError}</p>}
       {opts.length > 0 && (
         <ul className="surface absolute left-0 right-0 top-11 z-50 max-h-64 overflow-y-auto rounded-lg border py-1 shadow-lg">
           {opts.map((o) => (
             <li key={o.id}>
-              <button onClick={() => { onChange({ label: o.name, coord: [o.lon, o.lat] }); setOpts([]); }} className="w-full px-3 py-2 text-left hover:bg-secondary">
+              <Button variant="ghost" onClick={() => { onChange({ label: o.name, coord: [o.lon, o.lat] }); setOpts([]); }} className="w-full px-3 py-2 text-left hover:bg-secondary">
                 <div className="truncate text-sm">{o.name}</div>
                 <div className="truncate text-xs text-muted-foreground">{o.subtitle}</div>
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
@@ -96,11 +100,25 @@ function Directions() {
   const sp = Route.useSearch();
   const navigate = useNavigate();
   const { settings, update } = useSettings();
-  const { map, routes, setRoutes, activeRoute, setActiveRoute, navigating, setNavigating, position } = useMapState();
+  const { map, routes, setRoutes, activeRoute, setActiveRoute, navigating, setNavigating, position, setPosition, setMarkers } = useMapState();
   const [stops, setStops] = useState<Stop[]>(() => [toStop(sp.from), toStop(sp.to, sp.toName)]);
   const [mode, setMode] = useState<TravelMode>(sp.mode ?? settings.travelMode);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (stops[0]?.coord) return;
+    let live = true;
+    location.once().then(p => {
+      if (!live) return;
+      setPosition(p);
+      setStops(s => s[0]?.coord ? s : [{ label: "Your location", coord: [p.lon,p.lat], isMe: true }, ...s.slice(1)]);
+      map?.easeTo({ center: [p.lon,p.lat], zoom: 16, duration: 800 });
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [map]);
+  useEffect(() => {
+    setMarkers(stops.flatMap((s,i) => s.coord ? [{ id: `@${s.coord[1]},${s.coord[0]}`, name: `${String.fromCharCode(65+i)} · ${s.label}`, subtitle: "", kind: "Route stop", lon: s.coord[0], lat: s.coord[1] }] : []));
+  }, [stops]);
 
   // Default the start to the user's location when available.
   useEffect(() => {
@@ -113,14 +131,14 @@ function Directions() {
   useEffect(() => {
     const coords = stops.map((s) => s.coord).filter(Boolean) as [number, number][];
     if (coords.length < 2 || coords.length !== stops.length) { setRoutes([]); return; }
-    if (!network.online()) { setError("Routing needs a connection."); return; }
     let live = true;
     setLoading(true); setError(null);
-    valhalla.route(coords, { mode, ...settings })
+    routingEngine.route(coords, { mode, ...settings })
       .then((r) => {
         if (!live) return;
         setRoutes(r, 0);
-        const all = r[0]!.coords;
+        const all = r[0]?.coords;
+        if (!all?.length) { setError("No route found."); return; }
         const lons = all.map((c) => c[0]), lats = all.map((c) => c[1]);
         const pad = innerWidth < 768 ? { top: 80, bottom: innerHeight * 0.5 + 20, left: 30, right: 30 } : { top: 60, bottom: 60, left: innerWidth >= 768 ? 440 : 60, right: 80 };
         map?.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: pad, duration: 900 });
@@ -131,13 +149,15 @@ function Directions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, map]);
 
-  useEffect(() => () => { setRoutes([]); setNavigating(false); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => { setRoutes([]); setMarkers([]); setNavigating(false); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (navigating && routes[activeRoute]) {
-    return <Guidance route={routes[activeRoute]} destination={stops[stops.length - 1]!.coord!} stops={stops.map((s) => s.coord!)} mode={mode} onEnd={() => setNavigating(false)} />;
+  const selected = routes[activeRoute];
+  const destination = stops[stops.length - 1]?.coord;
+  if (navigating && selected && destination) {
+    return <Guidance route={selected} destination={destination} stops={stops.flatMap(s => s.coord ? [s.coord] : [])} mode={mode} onEnd={() => setNavigating(false)} />;
   }
 
-  const move = (i: number, d: number) => setStops((s) => { const n = [...s]; [n[i], n[i + d]] = [n[i + d]!, n[i]!]; return n; });
+  const move = (i: number, d: number) => setStops((s) => { const n = [...s]; const a=n[i], b=n[i+d]; if (a && b) { n[i]=b; n[i+d]=a; } return n; });
   const modes: { id: TravelMode; label: string; Icon: typeof Car }[] = [
     { id: "drive", label: "Drive", Icon: Car }, { id: "walk", label: "Walk", Icon: Footprints }, { id: "cycle", label: "Cycle", Icon: Bike },
   ];
@@ -147,14 +167,14 @@ function Directions() {
     <div className="pb-8">
       <header className="flex items-center justify-between px-5 pt-5">
         <h1 className="font-display text-2xl">Directions</h1>
-        <button onClick={() => navigate({ to: "/" })} aria-label="Close directions" className="text-muted-foreground hover:text-foreground"><X strokeWidth={1.5} /></button>
+        <Button variant="ghost" onClick={() => navigate({ to: "/" })} aria-label="Close directions" className="text-muted-foreground hover:text-foreground"><X strokeWidth={1.5} /></Button>
       </header>
       <div className="mt-3 flex gap-1 px-5" role="radiogroup" aria-label="Travel mode">
         {modes.map(({ id, label, Icon }) => (
-          <button key={id} role="radio" aria-checked={mode === id} onClick={() => { setMode(id); update({ travelMode: id }); }}
+          <Button variant="ghost" key={id} role="radio" aria-checked={mode === id} onClick={() => { setMode(id); update({ travelMode: id }); }}
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm ${mode === id ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>
             <Icon strokeWidth={1.5} className="h-4 w-4" /> {label}
-          </button>
+          </Button>
         ))}
       </div>
       <div className="mt-4 space-y-2 px-5">
@@ -162,16 +182,16 @@ function Directions() {
           <div key={i} className="flex items-center gap-1">
             <StopInput index={i} stop={s} placeholder={i === 0 ? "Start" : i === stops.length - 1 ? "Destination" : "Stop"} onChange={(n) => setStops((all) => all.map((x, j) => (j === i ? n : x)))} />
             <div className="flex flex-col">
-              <button disabled={i === 0} onClick={() => move(i, -1)} aria-label="Move stop up" className="text-muted-foreground hover:text-foreground disabled:opacity-25"><ArrowUp strokeWidth={1.5} className="h-3.5 w-3.5" /></button>
-              <button disabled={i === stops.length - 1} onClick={() => move(i, 1)} aria-label="Move stop down" className="text-muted-foreground hover:text-foreground disabled:opacity-25"><ArrowDown strokeWidth={1.5} className="h-3.5 w-3.5" /></button>
+              <Button variant="ghost" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Move stop up" className="text-muted-foreground hover:text-foreground disabled:opacity-25"><ArrowUp strokeWidth={1.5} className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" disabled={i === stops.length - 1} onClick={() => move(i, 1)} aria-label="Move stop down" className="text-muted-foreground hover:text-foreground disabled:opacity-25"><ArrowDown strokeWidth={1.5} className="h-3.5 w-3.5" /></Button>
             </div>
-            {stops.length > 2 && <button onClick={() => setStops((all) => all.filter((_, j) => j !== i))} aria-label="Remove stop" className="text-muted-foreground hover:text-foreground"><X strokeWidth={1.5} className="h-4 w-4" /></button>}
+            {stops.length > 2 && <Button variant="ghost" onClick={() => setStops((all) => all.filter((_, j) => j !== i))} aria-label="Remove stop" className="text-muted-foreground hover:text-foreground"><X strokeWidth={1.5} className="h-4 w-4" /></Button>}
           </div>
         ))}
-        {stops.length < 6 && (
-          <button onClick={() => setStops((s) => [...s.slice(0, -1), { label: "", coord: null }, s[s.length - 1]!])} className="flex items-center gap-1.5 text-sm text-primary">
+        {stops.length < 6 && stops[stops.length-1] && (
+          <Button variant="ghost" onClick={() => setStops((s) => [...s.slice(0, -1), { label: "", coord: null }, s[s.length - 1] ?? { label: "", coord: null }])} className="flex items-center gap-1.5 text-sm text-primary">
             <Plus strokeWidth={1.5} className="h-4 w-4" /> Add stop
-          </button>
+          </Button>
         )}
       </div>
       {mode === "drive" && (
@@ -190,23 +210,24 @@ function Directions() {
       <ul className="pt-2">
         {routes.map((r, i) => (
           <li key={i}>
-            <button onClick={() => setActiveRoute(i)} aria-pressed={i === activeRoute}
+            <Button variant="ghost" onClick={() => setActiveRoute(i)} aria-pressed={i === activeRoute}
               className={`flex w-full items-center gap-3 border-l-4 px-5 py-3 text-left ${i === activeRoute ? "border-primary bg-secondary/60" : "border-transparent hover:bg-secondary/40"}`}>
               <span className="flex-1">
                 <span className={`tnum block font-display text-xl ${i === activeRoute ? "text-primary" : ""}`}>{fmtDuration(r.duration)}</span>
                 <span className="tnum text-xs text-muted-foreground">{fmtDistance(r.distance, settings.units)}{i > 0 && best ? ` · ${r.duration >= best.duration ? "+" : "-"}${fmtDuration(Math.abs(r.duration - best.duration))}` : " · fastest"}</span>
               </span>
-            </button>
+            </Button>
           </li>
         ))}
       </ul>
-      {routes[activeRoute] && (
+      {selected && (
         <div className="px-5 pt-3">
-          <button onClick={() => setNavigating(true)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-medium text-primary-foreground hover:bg-primary-hover">
-            <Play strokeWidth={1.5} className="h-4 w-4" /> Start
-          </button>
+          {selected.offline && <p className="mb-3 text-xs text-muted-foreground">Offline roads · estimated time · road-name guidance only; restrictions may be incomplete.</p>}
+          <Button onClick={() => { const c = position ? [position.lon,position.lat] as [number,number] : stops[0]?.coord; if (c) map?.easeTo({ center: c, zoom: 17, pitch: 55, duration: 800 }); setNavigating(true); }} className="h-12 w-full rounded-xl">
+            <Play strokeWidth={1.5} className="h-4 w-4" /> Start trip
+          </Button>
           <ol className="mt-5 space-y-3 text-sm">
-            {routes[activeRoute].maneuvers.map((m, i) => (
+            {selected.maneuvers.map((m, i) => (
               <li key={i} className="flex gap-3">
                 <span className="tnum w-14 shrink-0 text-right text-xs text-muted-foreground">{m.length > 0 ? fmtDistance(m.length, settings.units) : ""}</span>
                 <span>{m.instruction}</span>

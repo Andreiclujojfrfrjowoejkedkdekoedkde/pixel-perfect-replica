@@ -1,7 +1,7 @@
 import createGraph from "ngraph.graph";
 import { aStar } from "ngraph.path";
 import { haversine } from "./format";
-import type { Place, Route, RouteOptions, RoutingEngine } from "./services";
+import type { Place, Route, RoutingEngine } from "./services";
 
 export type Bbox = [number, number, number, number];
 type Road = { id: number; nodes: number[]; tags: Record<string, string> };
@@ -68,7 +68,7 @@ export async function downloadRegion(name: string, bbox: Bbox, signal?: AbortSig
     const lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon;
     if (lat == null || lon == null || !(t.amenity || t.tourism || t.shop || t["addr:housenumber"])) continue;
     const kind = t.amenity ?? t.tourism ?? t.shop ?? "Address";
-    places.push({ id: `${e.type === "node" ? "N" : e.type === "way" ? "W" : "R"}${e.id}`, name: t.name ?? t.brand ?? [t["addr:street"], t["addr:housenumber"]].filter(Boolean).join(" ") || kind.replaceAll("_", " "), subtitle: [t["addr:street"], t["addr:city"]].filter(Boolean).join(", "), kind: kind.replaceAll("_", " "), lat, lon });
+    places.push({ id: `${e.type === "node" ? "N" : e.type === "way" ? "W" : "R"}${e.id}`, name: t.name ?? t.brand ?? ([t["addr:street"], t["addr:housenumber"]].filter(Boolean).join(" ") || kind.replaceAll("_", " ")), subtitle: [t["addr:street"], t["addr:city"]].filter(Boolean).join(", "), kind: kind.replaceAll("_", " "), lat, lon });
   }
   if (!roads.length) throw new Error("No roads were found. Choose another area.");
   const region: OfflineRegion = { id: bbox.join(","), name, bbox, date: new Date().toISOString(), places: [...new Map(places.map(p => [p.id, p])).values()], nodes, roads };
