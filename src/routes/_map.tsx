@@ -77,12 +77,12 @@ function Shell() {
 
   if (homeSettings) return <main className="fixed inset-0 overflow-hidden bg-background"><GlassDefs /><div className="homepage-map absolute inset-0"><MapCanvas /></div><div className="homepage-map-wash pointer-events-none absolute inset-0" /><div className="preferences-overlay absolute inset-0 z-40 flex justify-center overflow-y-auto px-3 py-6 sm:py-12"><div className="glass h-fit w-full max-w-xl rounded-xl"><Outlet /></div></div></main>;
 
-  if (isHome) return <main className="fixed inset-0 overflow-hidden bg-background"><GlassDefs /><div className="homepage-map absolute inset-0"><MapCanvas /></div><TrafficLayer enabled quiet /><HomeScreen /></main>;
+  if (isHome) return <main className="fixed inset-0 overflow-hidden bg-background"><GlassDefs /><div className="homepage-map absolute inset-0"><MapCanvas /></div><HomeScreen /></main>;
 
   return (
     <main className="fixed inset-0 overflow-hidden bg-background">
       <GlassDefs />
-      <div className={homeSettings ? "homepage-map absolute inset-0" : isSettings ? "settings-map absolute inset-0" : "absolute inset-0"}><MapCanvas /></div>
+      <div className={isSettings && !collapsed && !picking && !navigating ? "settings-map absolute inset-0" : "absolute inset-0"}><MapCanvas /></div>
       {homeSettings && <div className="homepage-map-wash pointer-events-none absolute inset-0" />}
       <NetworkBadge />
       {!isSettings && !navigating && <Controls layersOpen={layersOpen} setLayersOpen={setLayersOpen} />}

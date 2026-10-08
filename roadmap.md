@@ -1,7 +1,8 @@
 # Meridian roadmap
 
 ## Current improvements
-- [x] Real traffic on the homepage background and tighter non-scrolling mobile layout — 61 real traffic tiles returned HTTP 200; six portrait/landscape phone sizes fit without scrolling
+- [ ] Remove homepage traffic; keep map traffic opt-in, add linked Andrei Hedes information credit, and clear map blur when Preferences is hidden
+- [x] Tighter non-scrolling mobile layout — six portrait/landscape phone sizes fit without scrolling
 - [x] Slow city-wide horizontal/vertical background passes, shared by homepage-opened Preferences — 150-second legs using municipality bounds with regional fallback
 - [x] Gentle map blur for map-opened Preferences with return to the originating page — browser checked
 - [x] Non-scrolling phone homepage, attribution information icon and session-aware account access — checked at 390×844, 375×667, 320×568 and 844×390
