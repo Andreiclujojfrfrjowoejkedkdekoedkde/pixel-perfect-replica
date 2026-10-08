@@ -5,6 +5,7 @@ import { useMapState } from "@/components/map/MapContext";
 import { photonSearch, type Place } from "@/lib/services";
 import { useLibrary, library } from "@/lib/library";
 import { fmtDistance, haversine, parseCoords } from "@/lib/format";
+import { localSearch } from "@/lib/offline-data";
 import { useSettings } from "@/lib/settings";
 
 function Highlight({ text, q }: { text: string; q: string }) {
@@ -17,6 +18,7 @@ export const SearchBar = forwardRef<HTMLInputElement>(function SearchBar(_, ref)
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<Place[]>([]);
+  const [isOfflineResult, setIsOfflineResult] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cursor, setCursor] = useState(0);
   const { map, position } = useMapState();
@@ -30,7 +32,12 @@ export const SearchBar = forwardRef<HTMLInputElement>(function SearchBar(_, ref)
     const ac = new AbortController();
     const t = setTimeout(() => {
       const c = map ? (map.getCenter().toArray() as [number, number]) : [0, 0] as [number, number];
-      photonSearch(q, c, ac.signal).then((r) => { setResults(r); setError(null); }).catch((e) => { if (e.name !== "AbortError") setError(e.message); });
+      (async () => {
+        const local = await localSearch(q,c).catch(() => null);
+        if (local && (local.length || !navigator.onLine)) { if (!ac.signal.aborted) { setResults(local); setIsOfflineResult(true); setError(null); } return; }
+        const r = await photonSearch(q,c,ac.signal);
+        if (!ac.signal.aborted) { setResults(r); setIsOfflineResult(false); setError(null); }
+      })().catch(e => { if (!ac.signal.aborted) { setResults([]); setError(navigator.onLine ? e.message : "No downloaded places match this search."); } });
     }, 150);
     return () => { clearTimeout(t); ac.abort(); };
   }, [q, map]);
@@ -52,10 +59,10 @@ export const SearchBar = forwardRef<HTMLInputElement>(function SearchBar(_, ref)
     if (r.length) g.push({ label: "Recent", icon: Clock, items: r.slice(0, q ? 3 : 6) });
     const places = results.filter((p) => p.kind !== "Address");
     const addresses = results.filter((p) => p.kind === "Address");
-    if (places.length) g.push({ label: "Places", icon: MapPin, items: places });
-    if (addresses.length) g.push({ label: "Addresses", icon: MapPin, items: addresses });
+    if (places.length) g.push({ label: isOfflineResult ? "Offline places" : "Places", icon: MapPin, items: places });
+    if (addresses.length) g.push({ label: isOfflineResult ? "Offline addresses" : "Addresses", icon: MapPin, items: addresses });
     return g;
-  }, [q, ql, saved, recent, results]);
+  }, [q, ql, saved, recent, results, isOfflineResult]);
   const flat = groups.flatMap((g) => g.items);
 
   const choose = (p: Place) => {

@@ -11,19 +11,20 @@ export function SpeedPill({ limitKmh }: { limitKmh?: number | null }) {
   const [kmh, setKmh] = useState(0);
 
   useEffect(() => {
-    const raw = position?.speed != null ? position.speed * 3.6 : 0;
+    const raw = typeof position?.speed === "number" && Number.isFinite(position.speed) ? Math.max(0,position.speed * 3.6) : 0;
     smooth.current = smooth.current * 0.65 + raw * 0.35;
     setKmh(smooth.current);
   }, [position]);
 
   if (!navigating && kmh < 3) return null;
   const imperial = settings.units === "imperial";
-  const shown = Math.round(imperial ? kmh / 1.609 : kmh);
+  const known = typeof position?.speed === "number" && Number.isFinite(position.speed) && Date.now()-position.timestamp < 15000;
+  const shown = known ? Math.round(imperial ? kmh / 1.609344 : kmh) : "—";
   const over = limitKmh ? kmh - limitKmh : -Infinity;
   const tone = over > settings.speedTolerance ? "text-destructive" : over > 0 ? "text-traffic-slow" : "";
 
   return (
-    <div className="absolute bottom-28 left-3 z-30 flex items-end gap-2 md:bottom-8 md:left-auto md:right-20">
+    <div className="absolute bottom-52 left-3 z-30 flex items-end gap-2 md:bottom-8 md:left-auto md:right-20">
       <div className="glass flex flex-col items-center rounded-2xl px-4 py-2" aria-live="polite" aria-label={`Speed ${shown} ${imperial ? "miles" : "kilometres"} per hour`}>
         <span className={`tnum text-3xl font-semibold leading-none ${tone}`}>{shown}</span>
         <span className="smallcaps text-[10px] text-muted-foreground">{imperial ? "mph" : "km/h"}</span>

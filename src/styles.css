@@ -199,3 +199,10 @@
   letter-spacing: 0.06em;
 }
 .maplibregl-ctrl-bottom-left { margin-bottom: env(safe-area-inset-bottom); }
+
+.guidance-top { top: calc(env(safe-area-inset-top) + 12px); }
+.guidance-bottom { margin-bottom: env(safe-area-inset-bottom); }
+.trip-progress { appearance: none; border: 0; border-radius: 8px; overflow: hidden; background: var(--secondary); }
+.trip-progress::-webkit-progress-bar { background: var(--secondary); }
+.trip-progress::-webkit-progress-value { background: var(--primary); border-radius: 8px; }
+.trip-progress::-moz-progress-bar { background: var(--primary); }
