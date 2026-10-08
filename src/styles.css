@@ -280,3 +280,29 @@
   .homepage-attribution > span { display: none; }
   .homepage-attribution > button { display: inline-flex; height: 24px; width: 24px; }
 }
+
+/* Fit the launch screen to available phone height, including browser chrome. */
+@media (max-width: 767px) {
+  .homepage { height: 100dvh; overflow: hidden; align-items: center; }
+  .homepage-content { max-height: 100dvh; gap: 14px; padding: max(12px, env(safe-area-inset-top)) 18px max(10px, env(safe-area-inset-bottom)); }
+  .homepage-content > header { gap: 12px; }
+  .homepage-content h1 { font-size: 34px; }
+  .homepage-content header p { font-size: 9px; }
+  .homepage-account span { display: none; }
+  .homepage-account a { height: 40px; width: 40px; padding: 0; }
+  .homepage-action { height: 104px; padding: 14px; }
+  .homepage-content > section { gap: 6px; }
+  .homepage-content > section > div { gap: 8px; }
+  .homepage-content > section .glass { padding: 6px 10px; }
+  .homepage-content > section .h-12 { height: 36px; width: 36px; }
+  .homepage-attribution { margin-top: 0; }
+  .homepage-attribution > span { display: none; }
+  .homepage-attribution > button { display: inline-flex; }
+}
+@media (max-width: 767px) and (max-height: 700px) {
+  .homepage-content { gap: 10px; }
+  .homepage-content header p { display: none; }
+  .homepage-action { height: 86px; padding: 12px; }
+  .homepage-action > svg { margin-bottom: 2px; }
+  .homepage-action .text-xs { display: none; }
+}

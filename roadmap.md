@@ -1,6 +1,7 @@
 # Meridian roadmap
 
 ## Current improvements
+- [ ] Real traffic on the homepage background and tighter non-scrolling mobile layout — verify tiles and phone sizes
 - [x] Slow city-wide horizontal/vertical background passes, shared by homepage-opened Preferences — 150-second legs using municipality bounds with regional fallback
 - [x] Gentle map blur for map-opened Preferences with return to the originating page — browser checked
 - [x] Non-scrolling phone homepage, attribution information icon and session-aware account access — checked at 390×844, 375×667, 320×568 and 844×390
