@@ -67,11 +67,11 @@ function Shell() {
       else if (e.key.toLowerCase() === "l") setLayersOpen((o) => !o);
       else if (e.key === "+" || e.key === "=") map?.zoomIn();
       else if (e.key === "-") map?.zoomOut();
-      else if (e.key === "Escape") { if (layersOpen) setLayersOpen(false); else if (!isHome && !navigating) navigate({ to: "/" }); }
+      else if (e.key === "Escape") { if (layersOpen) setLayersOpen(false); else if (isSettings && !navigating) navigate({ to: homeSettings ? "/" : "/map" }); else if (!isHome && !navigating) navigate({ to: "/" }); }
     };
     addEventListener("keydown", h);
     return () => removeEventListener("keydown", h);
-  }, [map, layersOpen, isHome, navigating, navigate]);
+  }, [map, layersOpen, isHome, isSettings, homeSettings, navigating, navigate]);
 
   const panelContent = bp === "xl" && isPlace ? <HomePanel /> : isMap ? <HomePanel /> : <Outlet />;
 
