@@ -23,6 +23,10 @@ type MapState = {
   setStreetImage: (id: string | null) => void;
   navigating: boolean;
   setNavigating: (b: boolean) => void;
+  picking: string | null;
+  pickPoint: ((coord: [number, number]) => void) | null;
+  beginPick: (label: string, callback: (coord: [number, number]) => void) => void;
+  cancelPick: () => void;
 };
 
 const Ctx = createContext<MapState | null>(null);
@@ -37,6 +41,7 @@ export function MapProvider({ children, initialMode }: { children: ReactNode; in
   const [activeRoute, setActiveRoute] = useState(0);
   const [streetImage, setStreetImage] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
+  const [selection, setSelection] = useState<{ label: string; callback: (coord: [number, number]) => void } | null>(null);
   return (
     <Ctx.Provider
       value={{
@@ -44,6 +49,8 @@ export function MapProvider({ children, initialMode }: { children: ReactNode; in
         position, setPosition, markers, setMarkers, routes, activeRoute,
         setRoutes: (r, a = 0) => { setR(r); setActiveRoute(a); },
         setActiveRoute, streetImage, setStreetImage, navigating, setNavigating,
+        picking: selection?.label ?? null, pickPoint: selection?.callback ?? null,
+        beginPick: (label, callback) => setSelection({ label, callback }), cancelPick: () => setSelection(null),
       }}
     >
       {children}

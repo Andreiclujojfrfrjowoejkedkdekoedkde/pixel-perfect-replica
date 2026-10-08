@@ -55,14 +55,21 @@ export function decodePolyline(str: string, precision = 6): [number, number][] {
   return coords;
 }
 
-/** Distance from point p to polyline (metres) and index of nearest vertex. */
+/** Snap to the nearest segment rather than a vertex (sparse roads included). */
 export function nearestOnLine(p: [number, number], line: [number, number][]) {
-  let best = Infinity, idx = 0;
-  for (let i = 0; i < line.length; i++) {
-    const d = haversine(p, line[i]!);
-    if (d < best) { best = d; idx = i; }
+  let best = Infinity, idx = 0, fraction = 0, along = 0, accumulated = 0;
+  const scale = Math.cos(p[1] * Math.PI / 180);
+  for (let i = 0; i < line.length - 1; i++) {
+    const a = line[i], b = line[i + 1];
+    if (!a || !b) continue;
+    const dx = (b[0] - a[0]) * scale, dy = b[1] - a[1];
+    const t = Math.max(0, Math.min(1, (((p[0] - a[0]) * scale * dx) + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1)));
+    const d = haversine(p, [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+    const length = haversine(a, b);
+    if (d < best) { best = d; idx = i; fraction = t; along = accumulated + length * t; }
+    accumulated += length;
   }
-  return { distance: best, index: idx };
+  return { distance: best, index: idx, fraction, along, total: accumulated };
 }
 
 /** Turn an OSM opening_hours string into readable lines. */

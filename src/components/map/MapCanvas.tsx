@@ -18,6 +18,8 @@ export function MapCanvas() {
   const mapRef = useRef<MLMap | null>(null);
   const modeRef = useRef(st.mode);
   modeRef.current = st.mode;
+  const pickRef = useRef(st.pickPoint);
+  pickRef.current = st.pickPoint;
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +51,7 @@ export function MapCanvas() {
       map.on("click", (e) => {
         (async () => {
           try {
+             if (pickRef.current) { pickRef.current([e.lngLat.lng, e.lngLat.lat]); return; }
             if (modeRef.current === "street" && env.mapillary) {
               const id = await mapillaryImageNear(e.lngLat.lng, e.lngLat.lat, env.mapillary);
               if (id) st.setStreetImage(id);
@@ -96,7 +99,7 @@ export function MapCanvas() {
       properties: { active: i === st.activeRoute ? 1 : 0 },
       geometry: { type: "LineString", coordinates: r.coords },
     }));
-    lines.sort((a, b) => a.properties!["active"] - b.properties!["active"]);
+    lines.sort((a, b) => Number(a.properties?.["active"] ?? 0) - Number(b.properties?.["active"] ?? 0));
     set("meridian-route", { type: "FeatureCollection", features: lines });
     if (!map.getLayer("meridian-route-case")) {
       map.addLayer({ id: "meridian-route-case", type: "line", source: "meridian-route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": dark ? "#1B1612" : "#FBF6EC", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 6, 16, 14] } });
