@@ -8,7 +8,7 @@
 - [x] Recalculating state — live off-route test passed; keep-left/right from actual maneuver instructions, not invented lane geometry
 - [x] Departure/arrive-by planning and car/EV/van/truck profiles; real charging POI suggestions with unverified availability
 - [x] Traffic overlay and server-key proxy implemented, refreshes once a minute
-- [ ] Enable and test real traffic — needs TOMTOM_API_KEY; traffic-adjusted ETA is not provided by this overlay
+- [x] Connect real traffic — TOMTOM_API_KEY saved securely; proxy returned a real 256×256 traffic tile (HTTP 200); traffic-adjusted ETA is not provided by this overlay
 - [x] Crowd reporting implementation: police/hazards/construction, previews, confirmations, flags, expiry and server-enforced limits
 - [x] Account consent, local deletion and atomic account travel-data deletion; expired records removed daily (up to 24h after hidden)
 - [ ] Authenticated ETA/report/sync/deletion end-to-end checks — needs first real account signup; no auth users exist yet
