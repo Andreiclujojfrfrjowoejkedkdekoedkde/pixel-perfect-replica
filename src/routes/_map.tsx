@@ -138,7 +138,7 @@ function Shell() {
           )}
           {bp === "xl" && isPlace && !navigating && !picking && (
             <aside className="glass absolute bottom-4 right-20 top-4 z-30 w-[380px] overflow-hidden rounded-2xl">
-              <div className=isSettings ? "h-full overflow-y-auto" : "surface h-full overflow-y-auto"><Outlet /></div>
+              <div className="surface h-full overflow-y-auto"><Outlet /></div>
             </aside>
           )}
 
