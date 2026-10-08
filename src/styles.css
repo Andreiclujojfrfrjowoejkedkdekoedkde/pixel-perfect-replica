@@ -213,5 +213,7 @@
 .home-directions { box-shadow: inset 0 1px 0 var(--glass-rim), 0 4px 12px var(--glass-shade); }
 .home-category { box-shadow: inset 0 1px 0 var(--glass-rim); }
 .home-panel { letter-spacing: 0; }
+.area-corner { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--primary-foreground); background: var(--primary); color: var(--primary-foreground); display: flex; align-items: center; justify-content: center; font: 600 12px var(--font-sans); box-shadow: 0 2px 8px var(--glass-shade); cursor: grab; }
+.area-corner:active { cursor: grabbing; }
 @keyframes water-drift { from { transform: translateY(-15px) rotate(-4deg); } to { transform: translateY(25px) rotate(4deg); } }
 @media (prefers-reduced-motion: reduce) { .glass > .water-reflection { animation: none; } }

@@ -7,6 +7,7 @@ import { regions, downloadRegion, deleteRegion, regionArea, type OfflineRegion }
 import { photonSearch, type Place } from "@/lib/services";
 import { Button } from "@/components/ui/button";
 import { storage } from "@/lib/platform";
+import { AreaSelection } from "@/components/map/AreaSelection";
 
 export const Route = createFileRoute("/_map/offline")({
   validateSearch: z.object({ lat: z.number().optional(), lon: z.number().optional() }),
@@ -37,7 +38,8 @@ function tilesFor(b: [number, number, number, number], minZ: number, maxZ: numbe
 
 function Offline() {
   const navigate = useNavigate();
-  const { map, beginPick, cancelPick } = useMapState();
+  const { map, beginPick, cancelPick, picking } = useMapState();
+  const [firstCorner, setFirstCorner] = useState<[number, number] | null>(null);
   const [roadRegions, setRoadRegions] = useState<OfflineRegion[]>([]);
   const [regionBusy, setRegionBusy] = useState(false);
   const [regionError, setRegionError] = useState<string | null>(null);
@@ -85,10 +87,12 @@ function Offline() {
     catch (e) { setRegionError((e as Error).message); }
   };
   const selectRectangle = () => {
+    setCustomBbox(null); setFirstCorner(null);
     beginPick("first corner", first => {
+      setFirstCorner(first);
       beginPick("opposite corner", second => {
         const b: [number,number,number,number] = [Math.min(first[0],second[0]),Math.min(first[1],second[1]),Math.max(first[0],second[0]),Math.max(first[1],second[1])];
-        setCustomBbox(b); cancelPick();
+        setCustomBbox(b); setFirstCorner(null); cancelPick();
       });
     });
   };
@@ -138,6 +142,7 @@ function Offline() {
 
   return (
     <div className="pb-8">
+      <AreaSelection bounds={customBbox} first={picking ? firstCorner : null} onChange={setCustomBbox} />
       <header className="flex items-center justify-between px-5 pt-5">
         <h1 className="font-display text-2xl">Offline maps</h1>
         <Button variant="ghost" onClick={() => navigate({ to: "/" })} aria-label="Close" className="text-muted-foreground hover:text-foreground"><X strokeWidth={1.5} /></Button>

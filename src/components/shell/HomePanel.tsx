@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Fuel, Utensils, ParkingSquare, PlugZap, Pill, BedDouble, Bookmark, Clock, Navigation, Compass, ArrowUpRight, Download } from "lucide-react";
 import { useMapState } from "@/components/map/MapContext";
@@ -20,28 +20,49 @@ export function HomePanel() {
   const [status, setStatus] = useState<string | null>(null);
 
   const request = useRef<AbortController | null>(null);
+  const cache = useRef(new Map<string, { time: number; places: Place[] }>());
   const runCategory = async (id: string, tag: string) => {
-    if (!map) return;
-    request.current?.abort();
     if (active === id) { setActive(null); setResults([]); setMarkers([]); return; }
-    setActive(id); setStatus("Looking around this area"); setResults([]);
-    const controller = new AbortController(); request.current = controller;
-    const b = map.getBounds();
-    const center = map.getCenter();
-    const dx = Math.min(0.12, 0.045 / Math.max(0.25, Math.cos(center.lat * Math.PI / 180)));
-    const bounds: [number,number,number,number] = [Math.max(b.getWest(),center.lng-dx), Math.max(b.getSouth(),center.lat-0.045), Math.min(b.getEast(),center.lng+dx), Math.min(b.getNorth(),center.lat+0.045)];
-    try {
-      const r = await nearbyCategory(id, tag, bounds, controller.signal);
-      if (controller.signal.aborted) return;
-      const c = map.getCenter().toArray() as [number, number];
-      r.sort((a, z) => haversine(c, [a.lon, a.lat]) - haversine(c, [z.lon, z.lat]));
-      setResults(r); setMarkers(r);
-      setStatus(r.length ? null : "Nothing found in view.");
-    } catch (e) {
-      if (controller.signal.aborted) return;
-      setStatus((e as Error).message); setActive(null);
-    }
+    setActive(id);
   };
+
+  useEffect(() => {
+    if (!map || !active) return;
+    const category = CATEGORIES.find(c => c.id === active);
+    if (!category) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let disposed = false;
+    const load = async () => {
+      request.current?.abort();
+      const b = map.getBounds();
+      setResults([]); setMarkers([]);
+      if (map.getZoom() < 11 || b.getEast() - b.getWest() > 1 || b.getNorth() - b.getSouth() > 1) {
+        setStatus("Zoom in to see places in this area."); return;
+      }
+      const bounds: [number, number, number, number] = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+      const key = `${active}:${bounds.map(n => n.toFixed(4)).join(":")}`;
+      const controller = new AbortController(); request.current = controller;
+      setStatus("Looking around this area");
+      try {
+        const cached = cache.current.get(key);
+        const found = cached && Date.now() - cached.time < 300000 ? cached.places : await nearbyCategory(category.id, category.tag, bounds, controller.signal);
+        if (disposed || controller.signal.aborted) return;
+        if (cache.current.size >= 20) { const oldest = cache.current.keys().next().value; if (oldest) cache.current.delete(oldest); }
+        cache.current.set(key, { time: Date.now(), places: found });
+        const current = map.getBounds();
+        const r = found.filter(p => current.contains([p.lon, p.lat]));
+        const center = map.getCenter().toArray() as [number, number];
+        r.sort((a, z) => haversine(center, [a.lon, a.lat]) - haversine(center, [z.lon, z.lat]));
+        setResults(r); setMarkers(r); setStatus(r.length ? null : "Nothing found in view.");
+      } catch (error) { if (!disposed && !controller.signal.aborted) setStatus((error as Error).message); }
+    };
+    const schedule = () => {
+      request.current?.abort(); setMarkers([]); setResults([]);
+      clearTimeout(timer); timer = setTimeout(() => { void load(); }, 750);
+    };
+    void load(); map.on("moveend", schedule);
+    return () => { disposed = true; clearTimeout(timer); request.current?.abort(); map.off("moveend", schedule); };
+  }, [map, active, setMarkers]);
 
   const origin: [number, number] | null = position ? [position.lon, position.lat] : map ? (map.getCenter().toArray() as [number, number]) : null;
 

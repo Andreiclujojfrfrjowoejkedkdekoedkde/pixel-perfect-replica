@@ -20,4 +20,6 @@
 - Map point selection is owned by MapContext; directions stays mounted during selection and trips, with guidance portalled to the map overlay. Why: hiding planning must not reset navigation state or clip driving controls.
 - Navigation progress snaps to road segments and camera following pauses after manual gestures. Why: sparse vertices must not cause false reroutes or fight user map movement.
 
-- Homepage water reflections are pointer-transparent, reduced-motion-aware SVG contours confined to the glass panel. Why: animate the glass without hiding or blocking the live map.
+- Water animation belongs only on the standalone homepage, never the map menu. Why: keep transparent map controls visually clean.
+- Offline area selection uses a MapLibre polygon and draggable DOM corner markers owned by the offline page. Why: keep bounds visible and editable without creating another map canvas.
+- Category searches refresh after map movement using bounded viewport Overpass queries and a small TTL cache; MapLibre clusters expand on click. Why: offer worldwide source coverage without loading a global dataset onto devices.

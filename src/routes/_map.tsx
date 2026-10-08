@@ -10,7 +10,6 @@ import { StreetViewer } from "@/components/map/StreetViewer";
 import { SpeedPill } from "@/components/nav/SpeedPill";
 import { NetworkBadge } from "@/components/shell/NetworkBadge";
 import { GlassDefs } from "@/components/glass/GlassDefs";
-import { WaterReflection } from "@/components/glass/WaterReflection";
 import { useSettings } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, MapPin, X } from "lucide-react";
@@ -108,7 +107,6 @@ function Shell() {
             >
               <SearchBar ref={searchRef} />
               <div className={`glass min-h-0 overflow-hidden rounded-2xl ${isHome ? "home-glass flex-none" : "flex-1"}`}>
-                {isHome && <WaterReflection />}
                 <div className={isHome ? "home-scroll relative overflow-y-auto" : "surface h-full overflow-y-auto"}>{panelContent}</div>
               </div>
               {bp === "xl" && (
