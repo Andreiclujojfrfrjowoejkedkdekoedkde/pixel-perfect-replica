@@ -52,6 +52,14 @@ export function MapCanvas() {
         (async () => {
           try {
              if (pickRef.current) { pickRef.current([e.lngLat.lng, e.lngLat.lat]); return; }
+             const cluster = map.getLayer("meridian-clusters") ? map.queryRenderedFeatures(e.point, { layers: ["meridian-clusters"] })[0] : undefined;
+             if (cluster?.geometry.type === "Point") {
+               const source = map.getSource("meridian-markers") as GeoJSONSource;
+               const zoom = await source.getClusterExpansionZoom(Number(cluster.properties?.["cluster_id"]));
+               const [lon, lat] = cluster.geometry.coordinates;
+               if (typeof lon === "number" && typeof lat === "number") map.easeTo({ center: [lon, lat], zoom });
+               return;
+             }
             if (modeRef.current === "street" && env.mapillary) {
               const id = await mapillaryImageNear(e.lngLat.lng, e.lngLat.lat, env.mapillary);
               if (id) st.setStreetImage(id);
@@ -91,7 +99,7 @@ export function MapCanvas() {
     const set = (id: string, data: FeatureCollection) => {
       const s = map.getSource(id) as GeoJSONSource | undefined;
       if (s) s.setData(data);
-      else map.addSource(id, { type: "geojson", data });
+      else map.addSource(id, { type: "geojson", data, ...(id === "meridian-markers" ? { cluster: true, clusterRadius: 50, clusterMaxZoom: 14 } : {}) });
     };
 
     const lines: Feature[] = st.routes.map((r, i) => ({
@@ -111,8 +119,10 @@ export function MapCanvas() {
       features: st.markers.map((m) => ({ type: "Feature", properties: { id: m.id, name: m.name }, geometry: { type: "Point", coordinates: [m.lon, m.lat] } })),
     });
     if (!map.getLayer("meridian-markers")) {
-      map.addLayer({ id: "meridian-markers", type: "circle", source: "meridian-markers", paint: { "circle-radius": 7, "circle-color": routeColor(dark), "circle-stroke-color": dark ? "#1B1612" : "#FBF6EC", "circle-stroke-width": 2.5 } });
-      map.addLayer({ id: "meridian-marker-labels", type: "symbol", source: "meridian-markers", layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-offset": [0, 1.3], "text-anchor": "top", "text-optional": true }, paint: { "text-color": dark ? "#EDE3D1" : "#2A2119", "text-halo-color": dark ? "#1B1612" : "#F1E9DA", "text-halo-width": 1.5 } });
+      map.addLayer({ id: "meridian-clusters", type: "circle", source: "meridian-markers", filter: ["has", "point_count"], paint: { "circle-radius": ["step", ["get", "point_count"], 17, 20, 22, 100, 28], "circle-color": routeColor(dark), "circle-stroke-color": dark ? "#1B1612" : "#FBF6EC", "circle-stroke-width": 2.5 } });
+      map.addLayer({ id: "meridian-cluster-count", type: "symbol", source: "meridian-markers", filter: ["has", "point_count"], layout: { "text-field": ["get", "point_count_abbreviated"], "text-font": ["Noto Sans Bold"], "text-size": 12 }, paint: { "text-color": dark ? "#1B1612" : "#FBF6EC" } });
+      map.addLayer({ id: "meridian-markers", type: "circle", source: "meridian-markers", filter: ["!", ["has", "point_count"]], paint: { "circle-radius": 7, "circle-color": routeColor(dark), "circle-stroke-color": dark ? "#1B1612" : "#FBF6EC", "circle-stroke-width": 2.5 } });
+      map.addLayer({ id: "meridian-marker-labels", type: "symbol", source: "meridian-markers", filter: ["!", ["has", "point_count"]], layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-offset": [0, 1.3], "text-anchor": "top", "text-optional": true }, paint: { "text-color": dark ? "#EDE3D1" : "#2A2119", "text-halo-color": dark ? "#1B1612" : "#F1E9DA", "text-halo-width": 1.5 } });
     }
 
     const p = st.position;

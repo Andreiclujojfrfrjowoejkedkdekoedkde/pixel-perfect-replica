@@ -52,8 +52,8 @@ export const CATEGORIES = [
 
 export async function categorySearch(tag: string, bbox: [number, number, number, number], signal?: AbortSignal): Promise<Place[]> {
   const [w, s, e, n] = bbox;
-  const q = `[out:json][timeout:20];nwr${tag}(${s},${w},${n},${e});out center tags 60;`;
-  const j = await overpass(q.replace("out center tags 60", "out center tags 300"), signal);
+  const q = `[out:json][timeout:20];nwr${tag}(${s},${w},${n},${e});out center tags 2000;`;
+  const j = await overpass(q, signal);
   return (j.elements ?? []).map((el: any) => {
     const t = el.tags ?? {};
     const lat = el.lat ?? el.center?.lat;

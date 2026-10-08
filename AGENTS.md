@@ -22,3 +22,4 @@
 
 - Water animation belongs only on the standalone homepage, never the map menu. Why: keep transparent map controls visually clean.
 - Offline area selection uses a MapLibre polygon and draggable DOM corner markers owned by the offline page. Why: keep bounds visible and editable without creating another map canvas.
+- Category searches refresh after map movement using bounded viewport Overpass queries and a small TTL cache; MapLibre clusters expand on click. Why: offer worldwide source coverage without loading a global dataset onto devices.
