@@ -5,7 +5,7 @@
 - [x] Select start, destination and intermediate stops on the map
 - [x] Reliable nearby categories with regional POI downloads (no global bulk import)
 - [x] Regional offline road routing and offline place search
-- [ ] Refine glass homepage and animated water treatment — waiting for visual selection
+- [x] Refine glass homepage and animated water treatment — original atlas direction, no generated prototypes
 - [ ] Global bulk POI import — needs a licensed global feed and dedicated ingestion/storage; regional real-data downloads work instead
 
 - [x] 1. Design system, liquid glass, responsive shell, map with four modes
