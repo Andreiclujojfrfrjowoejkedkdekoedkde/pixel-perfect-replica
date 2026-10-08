@@ -43,15 +43,21 @@ export function MapCanvas() {
         try { storage.set("view", { c: map.getCenter().toArray(), z: map.getZoom() }); } catch { /* storage full/blocked */ }
       });
       map.on("style.load", () => st.bumpStyle());
-      map.on("contextmenu", (e) => navigate({ to: "/place/$id", params: { id: `@${e.lngLat.lat.toFixed(6)},${e.lngLat.lng.toFixed(6)}` } }));
-      map.on("click", async (e) => {
-        if (modeRef.current === "street" && env.mapillary) {
-          const id = await mapillaryImageNear(e.lngLat.lng, e.lngLat.lat, env.mapillary);
-          if (id) st.setStreetImage(id);
-          return;
-        }
-        const f = map.queryRenderedFeatures(e.point, { layers: ["meridian-markers"].filter((l) => map.getLayer(l)) })[0];
-        if (f?.properties?.["id"]) navigate({ to: "/place/$id", params: { id: String(f.properties["id"]) } });
+      map.on("contextmenu", (e) => {
+        try { navigate({ to: "/place/$id", params: { id: `@${e.lngLat.lat.toFixed(6)},${e.lngLat.lng.toFixed(6)}` } }); } catch { /* ignore */ }
+      });
+      map.on("click", (e) => {
+        (async () => {
+          try {
+            if (modeRef.current === "street" && env.mapillary) {
+              const id = await mapillaryImageNear(e.lngLat.lng, e.lngLat.lat, env.mapillary);
+              if (id) st.setStreetImage(id);
+              return;
+            }
+            const f = map.queryRenderedFeatures(e.point, { layers: ["meridian-markers"].filter((l) => map.getLayer(l)) })[0];
+            if (f?.properties?.["id"]) navigate({ to: "/place/$id", params: { id: String(f.properties["id"]) } });
+          } catch { /* ignore */ }
+        })();
       });
       mapRef.current = map;
       st.setMap(map);
