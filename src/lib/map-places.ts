@@ -16,7 +16,7 @@ export function visibleMapPlaces(map: MLMap, category: string): Place[] {
   for (const feature of map.querySourceFeatures("omt", { sourceLayer: "poi" })) {
     const p = feature.properties;
     const kind = String(p?.["subclass"] ?? p?.["class"] ?? "");
-    if (!kinds[category]?.includes(kind) && !kinds[category]?.includes(String(p?.["class"]))) continue;
+    if (!kinds[category]?.includes(kind) && !(category === "lodging" && p?.["class"] === "lodging")) continue;
     if (feature.geometry.type !== "Point") continue;
     const [lon, lat] = feature.geometry.coordinates;
     if (typeof lon !== "number" || typeof lat !== "number" || !bounds.contains([lon, lat])) continue;
