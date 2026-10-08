@@ -27,7 +27,7 @@ function AccountPage() {
     else { update({ tripHistory: h, syncTrips: h && s }); await refresh(); setMessage("Privacy preferences saved."); }
     setBusy(false);
   };
-  return <main className="h-dvh overflow-y-auto bg-background px-5 py-10"><div className="mx-auto max-w-lg">
+  return <main className="h-dvh overflow-y-auto bg-background px-5 py-10"><div className="glass mx-auto max-w-lg rounded-xl p-5 sm:p-8">
     <Button asChild variant="ghost"><Link to="/settings"><ArrowLeft strokeWidth={1.5} /> Preferences</Link></Button>
     <header className="my-8"><ShieldCheck className="mb-4 h-8 w-8 text-primary" strokeWidth={1.5} /><h1 className="font-display text-3xl">Account & privacy</h1><p className="mt-3 text-sm text-muted-foreground">Navigation works without an account. Trip history is off unless you choose it; no route traces are saved. Trip summaries expire after 30 days.</p></header>
     {!ready ? <p>Checking account…</p> : !user ? <>

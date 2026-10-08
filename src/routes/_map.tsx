@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, useMatchRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useMatchRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { MapProvider, useMapState } from "@/components/map/MapContext";
 import { MapCanvas } from "@/components/map/MapCanvas";
@@ -6,6 +6,7 @@ import { Controls } from "@/components/map/Controls";
 import { SearchBar } from "@/components/search/SearchBar";
 import { BottomSheet } from "@/components/shell/BottomSheet";
 import { HomePanel } from "@/components/shell/HomePanel";
+import { useCityDrift } from "@/components/map/useCityDrift";
 import { HomeScreen } from "@/components/shell/HomeScreen";
 import { StreetViewer } from "@/components/map/StreetViewer";
 import { SpeedPill } from "@/components/nav/SpeedPill";
@@ -54,6 +55,10 @@ function Shell() {
   const isPlace = !!matchRoute({ to: "/place/$id" });
   const isSettings = !!matchRoute({ to: "/settings" });
 
+  const search = useSearch({ strict: false }) as { from?: string };
+  const homeSettings = isSettings && search.from === "home";
+  useCityDrift(isHome || homeSettings);
+
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
@@ -70,14 +75,17 @@ function Shell() {
 
   const panelContent = bp === "xl" && isPlace ? <HomePanel /> : isMap ? <HomePanel /> : <Outlet />;
 
+  if (homeSettings) return <main className="fixed inset-0 overflow-hidden bg-background"><GlassDefs /><div className="homepage-map absolute inset-0"><MapCanvas /></div><div className="homepage-map-wash pointer-events-none absolute inset-0" /><div className="preferences-overlay absolute inset-0 z-40 flex justify-center overflow-y-auto px-3 py-6 sm:py-12"><div className="glass h-fit w-full max-w-xl rounded-xl"><Outlet /></div></div></main>;
+
   if (isHome) return <main className="fixed inset-0 overflow-hidden bg-background"><GlassDefs /><div className="homepage-map absolute inset-0"><MapCanvas /></div><HomeScreen /></main>;
 
   return (
     <main className="fixed inset-0 overflow-hidden bg-background">
       <GlassDefs />
-      <MapCanvas />
+      <div className={homeSettings ? "homepage-map absolute inset-0" : isSettings ? "settings-map absolute inset-0" : "absolute inset-0"}><MapCanvas /></div>
+      {homeSettings && <div className="homepage-map-wash pointer-events-none absolute inset-0" />}
       <NetworkBadge />
-      {!navigating && <Controls layersOpen={layersOpen} setLayersOpen={setLayersOpen} />}
+      {!isSettings && !navigating && <Controls layersOpen={layersOpen} setLayersOpen={setLayersOpen} />}
       <SpeedPill />
       <StreetViewer />
       <RoadReports />
@@ -115,7 +123,7 @@ function Shell() {
             >
               <SearchBar ref={searchRef} />
               <div className={`glass min-h-0 overflow-hidden rounded-2xl ${isMap ? "flex-none" : "flex-1"}`}>
-                <div className={isMap ? "home-scroll relative overflow-y-auto" : "surface h-full overflow-y-auto"}>{panelContent}</div>
+                <div className={isMap ? "home-scroll relative overflow-y-auto" : isSettings ? "h-full overflow-y-auto" : "surface h-full overflow-y-auto"}>{panelContent}</div>
               </div>
               {bp === "xl" && (
                 <Button variant="ghost"

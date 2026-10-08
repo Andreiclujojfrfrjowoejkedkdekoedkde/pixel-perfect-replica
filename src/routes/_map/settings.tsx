@@ -5,9 +5,13 @@ import { useSettings, env, type Settings } from "@/lib/settings";
 import { library } from "@/lib/library";
 import { Button } from "@/components/ui/button";
 import { storage } from "@/lib/platform";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { clearTrips } from "@/lib/trips";
 
 export const Route = createFileRoute("/_map/settings")({
+  validateSearch: (search: Record<string, unknown>): { from?: "home" | "map" } => ({ from: search["from"] === "home" ? "home" : "map" }),
   head: () => ({
     meta: [
       { title: "Settings — Meridian" },
@@ -32,26 +36,25 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
-  return <label className="flex min-h-12 items-center justify-between gap-4 py-2 text-sm">{label}<span className="shrink-0">{children}</span></label>;
+  return <div className="flex min-h-12 items-center justify-between gap-4 py-2 text-sm"><span>{label}</span><span className="shrink-0">{children}</span></div>;
 }
 
 function SettingsPage() {
   const { settings: s, update } = useSettings();
   const navigate = useNavigate();
+  const { from } = Route.useSearch();
   const toggle = (k: keyof Settings) => (
-    <input type="checkbox" className="h-4 w-4 accent-primary" checked={s[k] as boolean} onChange={(e) => update({ [k]: e.target.checked })} />
+    <Switch aria-label={String(k)} checked={s[k] as boolean} onCheckedChange={checked => update({ [k]: checked })} />
   );
   const select = <K extends keyof Settings>(k: K, opts: [Settings[K], string][]) => (
-    <select value={String(s[k])} onChange={(e) => { const option = opts.find(([v]) => String(v) === e.target.value); if (option) update({ [k]: option[0] } as Partial<Settings>); }} className="rounded-md border bg-background px-2 py-1 text-sm">
-      {opts.map(([v, l]) => <option key={String(v)} value={String(v)}>{l}</option>)}
-    </select>
+    <Select value={String(s[k])} onValueChange={value => { const option = opts.find(([v]) => String(v) === value); if (option) update({ [k]: option[0] } as Partial<Settings>); }}><SelectTrigger aria-label={String(k)} className="glass min-w-32"><SelectValue /></SelectTrigger><SelectContent>{opts.map(([v, label]) => <SelectItem key={String(v)} value={String(v)}>{label}</SelectItem>)}</SelectContent></Select>
   );
 
   return (
     <div className="pb-10">
       <header className="flex items-center justify-between px-5 pt-5">
         <h1 className="font-display text-2xl">Settings</h1>
-        <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/" })} aria-label="Close settings" className="text-muted-foreground hover:text-foreground"><X strokeWidth={1.5} /></Button>
+        <Button variant="ghost" size="icon" onClick={() => navigate({ to: from === "home" ? "/" : "/map" })} aria-label="Close settings" className="text-muted-foreground hover:text-foreground"><X strokeWidth={1.5} /></Button>
       </header>
       <Section title="General">
         <Row label="Units">{select("units", [["metric", "Kilometres"], ["imperial", "Miles"]])}</Row>
@@ -63,14 +66,14 @@ function SettingsPage() {
         <Row label="Default mode">{select("defaultMode", [["standard", "Standard"], ["3d", "3D"], ["earth", "Earth"], ["street", "Street view"]])}</Row>
         <Row label="3D buildings">{toggle("buildings3d")}</Row>
         <Row label="Label size">
-          <input type="range" min={0.8} max={1.4} step={0.1} value={s.labelScale} onChange={(e) => update({ labelScale: +e.target.value })} className="accent-primary" aria-label="Label size" />
+          <Slider min={0.8} max={1.4} step={0.1} value={[s.labelScale]} onValueChange={value => { if (value[0] !== undefined) update({ labelScale: value[0] }); }} className="w-32" aria-label="Label size" />
         </Row>
         <Row label="Labels on satellite">{toggle("earthLabels")}</Row>
       </Section>
       <Section title="Navigation">
         <Row label="Voice guidance">{toggle("voice")}</Row>
         <Row label="Voice volume">
-          <input type="range" min={0} max={1} step={0.1} value={s.volume} onChange={(e) => update({ volume: +e.target.value })} className="accent-primary" aria-label="Voice volume" />
+          <Slider min={0} max={1} step={0.1} value={[s.volume]} onValueChange={value => { if (value[0] !== undefined) update({ volume: value[0] }); }} className="w-32" aria-label="Voice volume" />
         </Row>
         <Row label="Speed tolerance">{select("speedTolerance", [[0, "0 km/h"], [5, "5 km/h"], [10, "10 km/h"]])}</Row>
         <Row label="Avoid tolls">{toggle("avoidTolls")}</Row>
@@ -92,8 +95,8 @@ function SettingsPage() {
       </Section>
       <Section title="Vehicle">
         <Row label="Profile">{select("vehicleType", [["car", "Car"], ["ev", "Electric car"], ["van", "Van"], ["truck", "Truck"]])}</Row>
-        {s.vehicleType === "ev" && <Row label="Full-charge range (km)"><input aria-label="EV range in kilometres" type="number" min={50} max={1000} value={s.evRangeKm} onChange={e => update({ evRangeKm: Math.max(50,Math.min(1000,Number(e.target.value)||50)) })} className="w-20 rounded-md border bg-background p-2" /></Row>}
-        {["van","truck"].includes(s.vehicleType) && <><Row label="Height (metres)"><input aria-label="Vehicle height in metres" type="number" min={1} max={6} step={0.1} value={s.vehicleHeight} onChange={e => update({ vehicleHeight: Math.max(1,Math.min(6,Number(e.target.value)||1)) })} className="w-20 rounded-md border bg-background p-2" /></Row><Row label="Weight (tonnes)"><input aria-label="Vehicle weight in tonnes" type="number" min={0.5} max={80} step={0.5} value={s.vehicleWeight} onChange={e => update({ vehicleWeight: Math.max(0.5,Math.min(80,Number(e.target.value)||0.5)) })} className="w-20 rounded-md border bg-background p-2" /></Row><p className="py-3 text-xs text-muted-foreground">Clearance-aware routes require a connection and mapped restrictions. Always obey road signs.</p></>}
+        {s.vehicleType === "ev" && <Row label="Full-charge range (km)"><input aria-label="EV range in kilometres" type="number" min={50} max={1000} value={s.evRangeKm} onChange={e => update({ evRangeKm: Math.max(50,Math.min(1000,Number(e.target.value)||50)) })} className="w-20 rounded-md border bg-card/40 backdrop-blur-md p-2" /></Row>}
+        {["van","truck"].includes(s.vehicleType) && <><Row label="Height (metres)"><input aria-label="Vehicle height in metres" type="number" min={1} max={6} step={0.1} value={s.vehicleHeight} onChange={e => update({ vehicleHeight: Math.max(1,Math.min(6,Number(e.target.value)||1)) })} className="w-20 rounded-md border bg-card/40 backdrop-blur-md p-2" /></Row><Row label="Weight (tonnes)"><input aria-label="Vehicle weight in tonnes" type="number" min={0.5} max={80} step={0.5} value={s.vehicleWeight} onChange={e => update({ vehicleWeight: Math.max(0.5,Math.min(80,Number(e.target.value)||0.5)) })} className="w-20 rounded-md border bg-card/40 backdrop-blur-md p-2" /></Row><p className="py-3 text-xs text-muted-foreground">Clearance-aware routes require a connection and mapped restrictions. Always obey road signs.</p></>}
       </Section>
       <Section title="Services">
         <Row label="Live traffic overlay">{toggle("liveTraffic")}</Row>
