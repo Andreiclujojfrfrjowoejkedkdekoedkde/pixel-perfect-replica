@@ -95,7 +95,7 @@ export function MapCanvas() {
   // Overlays: routes, markers, user position. Re-added after each style load.
   useEffect(() => {
     const map = st.map;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !map.getStyle()?.layers) return;
     const set = (id: string, data: FeatureCollection) => {
       const s = map.getSource(id) as GeoJSONSource | undefined;
       if (s) s.setData(data);

@@ -1,8 +1,8 @@
 # Meridian roadmap
 
 ## Current improvements
-- [ ] Live rectangle preview and draggable corner points
-- [ ] Preserve transparent map menu without wave decoration
+- [x] Live rectangle preview and draggable corner points
+- [x] Preserve transparent map menu without wave decoration
 - [ ] Viewport-only category places and expandable clusters
 - [ ] Separate glass homepage following uploaded mockup — awaiting visual selection
 - [x] Live driving dashboard, accurate route progress, location-follow camera and recenter
