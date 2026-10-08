@@ -20,7 +20,7 @@
 - Map point selection is owned by MapContext; directions stays mounted during selection and trips, with guidance portalled to the map overlay. Why: hiding planning must not reset navigation state or clip driving controls.
 - Navigation progress snaps to road segments and camera following pauses after manual gestures. Why: sparse vertices must not cause false reroutes or fight user map movement.
 
-- The homepage reuses MapCanvas with a blurred moving street view, respects reduced motion, and requests no new location permission; its drift never writes location history. Why: preserve a single canvas and voluntary location disclosure.
+- A shared city-drift hook sweeps municipality bounds horizontally then vertically on the homepage and homepage-origin Preferences; map-origin Preferences only blurs the existing canvas and preserves its camera. Why: keep one canvas, honour reduced motion and avoid location traces or camera jumps.
 - The root index shows HomeScreen and /map shows the existing map menu inside the shared map layout; home/work shortcuts persist locally and pass coordinates into directions. Why: separate the home launch screen without duplicating the map canvas or navigation state.
 - Offline area selection uses a MapLibre polygon and draggable DOM corner markers owned by the offline page. Why: keep bounds visible and editable without creating another map canvas.
 - Category searches refresh after map movement using bounded viewport Overpass queries and a small TTL cache; MapLibre clusters expand on click. Why: offer worldwide source coverage without loading a global dataset onto devices.
