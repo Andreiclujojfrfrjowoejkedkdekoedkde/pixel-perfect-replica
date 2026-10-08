@@ -7,6 +7,7 @@ import { useLibrary, library } from "@/lib/library";
 import { fmtDistance, haversine } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { useSettings } from "@/lib/settings";
+import { visibleMapPlaces } from "@/lib/map-places";
 
 const ICONS = { fuel: Fuel, food: Utensils, parking: ParkingSquare, charging: PlugZap, pharmacy: Pill, lodging: BedDouble };
 
@@ -20,11 +21,13 @@ export function HomePanel() {
   const [status, setStatus] = useState<string | null>(null);
   const [savedOpen, setSavedOpen] = useState(false);
   const [recentOpen, setRecentOpen] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   const request = useRef<AbortController | null>(null);
   const cache = useRef(new Map<string, { time: number; places: Place[] }>());
-  const runCategory = async (id: string, tag: string) => {
-    if (active === id) { setActive(null); setResults([]); setMarkers([]); return; }
+  const runCategory = (id: string) => {
+    request.current?.abort();
+    if (active === id) { setActive(null); setResults([]); setMarkers([]); setStatus(null); return; }
     setActive(id);
   };
 
@@ -38,33 +41,41 @@ export function HomePanel() {
       request.current?.abort();
       const b = map.getBounds();
       setResults([]); setMarkers([]);
-      if (map.getZoom() < 11 || b.getEast() - b.getWest() > 1 || b.getNorth() - b.getSouth() > 1) {
+      const width = haversine([b.getWest(), b.getCenter().lat], [b.getEast(), b.getCenter().lat]);
+      const height = haversine([b.getCenter().lng, b.getSouth()], [b.getCenter().lng, b.getNorth()]);
+      if (map.getZoom() < 11 || width * height > 2500000000) {
         setStatus("Zoom in to see places in this area."); return;
       }
       const bounds: [number, number, number, number] = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
       const key = `${active}:${bounds.map(n => n.toFixed(4)).join(":")}`;
       const controller = new AbortController(); request.current = controller;
-      setStatus("Looking around this area");
+      const tilePlaces = visibleMapPlaces(map, active);
+      const publish = (places: Place[]) => {
+        const current = map.getBounds();
+        const r = places.filter(p => current.contains([p.lon, p.lat]));
+        const center = map.getCenter().toArray() as [number, number];
+        r.sort((a, z) => haversine(center, [a.lon, a.lat]) - haversine(center, [z.lon, z.lat]));
+        setResults(r); setMarkers(r);
+      };
+      publish(tilePlaces);
+      setStatus(tilePlaces.length ? "Map places · checking for more" : "Looking around this area");
       try {
         const cached = cache.current.get(key);
         const found = cached && Date.now() - cached.time < 300000 ? cached.places : await nearbyCategory(category.id, category.tag, bounds, controller.signal);
         if (disposed || controller.signal.aborted) return;
         if (cache.current.size >= 20) { const oldest = cache.current.keys().next().value; if (oldest) cache.current.delete(oldest); }
         cache.current.set(key, { time: Date.now(), places: found });
-        const current = map.getBounds();
-        const r = found.filter(p => current.contains([p.lon, p.lat]));
-        const center = map.getCenter().toArray() as [number, number];
-        r.sort((a, z) => haversine(center, [a.lon, a.lat]) - haversine(center, [z.lon, z.lat]));
-        setResults(r); setMarkers(r); setStatus(r.length ? null : "Nothing found in view.");
-      } catch (error) { if (!disposed && !controller.signal.aborted) setStatus((error as Error).message); }
+        publish(found.length ? found : tilePlaces); setStatus(found.length || tilePlaces.length ? null : "Nothing found in view.");
+      } catch (error) { if (!disposed && !controller.signal.aborted) { publish(tilePlaces); setStatus(tilePlaces.length ? "Showing map places · full search is busy. Please retry." : (error as Error).message); } }
     };
     const schedule = () => {
       request.current?.abort(); setMarkers([]); setResults([]);
       clearTimeout(timer); timer = setTimeout(() => { void load(); }, 750);
     };
-    void load(); map.on("moveend", schedule);
-    return () => { disposed = true; clearTimeout(timer); request.current?.abort(); map.off("moveend", schedule); };
-  }, [map, active, setMarkers]);
+    const onIdle = () => { if (request.current?.signal.aborted || !request.current) return; const places = visibleMapPlaces(map, active); if (places.length) { setResults(previous => previous.length ? previous : places); setMarkers(previous => previous.length ? previous : places); } };
+    void load(); map.on("moveend", schedule); map.on("idle", onIdle);
+    return () => { disposed = true; clearTimeout(timer); request.current?.abort(); map.off("moveend", schedule); map.off("idle", onIdle); };
+  }, [map, active, retry, setMarkers]);
 
   const origin: [number, number] | null = position ? [position.lon, position.lat] : map ? (map.getCenter().toArray() as [number, number]) : null;
 
@@ -94,7 +105,7 @@ export function HomePanel() {
           return (
             <Button variant="ghost"
               key={c.id}
-              onClick={() => runCategory(c.id, c.tag)}
+               onClick={() => runCategory(c.id)}
               aria-pressed={active === c.id}
               className={`home-category h-11 min-w-0 gap-1.5 rounded-lg border px-2 text-xs ${active === c.id ? "border-primary bg-primary text-primary-foreground" : "glass hover:border-primary/40 hover:text-primary"}`}
             >
@@ -103,7 +114,7 @@ export function HomePanel() {
           );
         })}
       </div>
-      {status && <p className="px-5 pb-2 text-sm text-muted-foreground">{status}</p>}
+      {status && <div role="status" className="px-5 pb-2 text-sm text-muted-foreground"><p>{status}</p>{status.includes("retry") && <Button variant="ghost" size="sm" className="mt-1 text-primary" onClick={() => setRetry(v => v + 1)}>Retry search</Button>}</div>}
 
       {results.length > 0 ? (
         <section>

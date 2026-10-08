@@ -113,7 +113,7 @@ export function Guidance({ route: initial, destination, stops, mode, onEnd }: { 
 
   const arrived=Boolean(progress && !stale && progress.remaining<25 && haversine(progress.me,destination)<45);
   const eta=progress && !stale ? new Date(now+progress.timeLeft*1000) : null;
-  const keep = !route.offline && progress && progress.toNext < 700 ? /\b(?:keep|stay|bear)\s+(?:to\s+the\s+)?(left|right)\b/i.exec(progress.next.instruction)?.[1]?.toLowerCase() ?? null : null;
+  const keep = !route.offline && progress && progress.toNext < 700 ? /\b(?:keep|stay|bear)\s+(?:to\s+(?:the\s+)?)?(left|right)\b/i.exec(progress.next.instruction)?.[1]?.toLowerCase() ?? ([18, 23].includes(progress.next.type) ? "right" : [19, 24].includes(progress.next.type) ? "left" : null) : null;
   const endTrip = async () => {
     setEnding(true);
     if (shareId) { try { await stopShare({ data: { id: shareId } }); } catch { setError("Could not stop sharing. Retry while connected, or stop it in Account. Link expires within 6 hours."); setEnding(false); return; } }
@@ -125,7 +125,7 @@ export function Guidance({ route: initial, destination, stops, mode, onEnd }: { 
       <div className="glass flex items-center gap-4 rounded-2xl p-4">
         <ManeuverIcon type={arrived ? 4 : progress?.next.type ?? 8} />
         <div className="min-w-0 flex-1">
-          <div className="tnum text-3xl font-semibold leading-none">{recalculating ? "Recalculating…" : arrived ? "Arrived" : stale ? "Locating" : progress ? fmtDistance(progress.toNext,settings.units) : "Locating"}</div>
+          <div className={`tnum font-semibold leading-none ${recalculating ? "text-xl" : "text-3xl"}`}>{recalculating ? "Recalculating…" : arrived ? "Arrived" : stale ? "Locating" : progress ? fmtDistance(progress.toNext,settings.units) : "Locating"}</div>
           <div className="mt-2 font-display text-lg leading-snug">{arrived ? "You have reached your destination" : progress?.next.street || progress?.next.instruction || "Waiting for GPS"}</div>
           <div className="mt-1 text-xs text-muted-foreground">{route.offline ? "Offline · estimated time" : mode === "drive" ? "Driving" : mode === "cycle" ? "Cycling" : "Walking"}{position && !stale && position.accuracy>50 ? " · GPS accuracy low" : ""}</div>
         </div>

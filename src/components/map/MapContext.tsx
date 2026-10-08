@@ -14,7 +14,7 @@ type MapState = {
   position: Position | null;
   setPosition: (p: Position | null) => void;
   markers: Place[];
-  setMarkers: (p: Place[]) => void;
+  setMarkers: React.Dispatch<React.SetStateAction<Place[]>>;
   routes: Route[];
   activeRoute: number;
   setRoutes: (r: Route[], active?: number) => void;
