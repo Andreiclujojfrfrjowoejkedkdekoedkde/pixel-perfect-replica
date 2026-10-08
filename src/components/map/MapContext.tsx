@@ -27,13 +27,7 @@ type MapState = {
 
 const Ctx = createContext<MapState | null>(null);
 
-export function MapProvider({
-  children,
-  initialMode,
-}: {
-  children: ReactNode;
-  initialMode: MapMode;
-}) {
+export function MapProvider({ children, initialMode }: { children: ReactNode; initialMode: MapMode }) {
   const [map, setMap] = useState<MLMap | null>(null);
   const [mode, setMode] = useState<MapMode>(initialMode);
   const [styleVersion, setSV] = useState(0);
@@ -46,27 +40,10 @@ export function MapProvider({
   return (
     <Ctx.Provider
       value={{
-        map,
-        setMap,
-        mode,
-        setMode,
-        styleVersion,
-        bumpStyle: () => setSV((v) => v + 1),
-        position,
-        setPosition,
-        markers,
-        setMarkers,
-        routes,
-        activeRoute,
-        setRoutes: (r, a = 0) => {
-          setR(r);
-          setActiveRoute(a);
-        },
-        setActiveRoute,
-        streetImage,
-        setStreetImage,
-        navigating,
-        setNavigating,
+        map, setMap, mode, setMode, styleVersion, bumpStyle: () => setSV((v) => v + 1),
+        position, setPosition, markers, setMarkers, routes, activeRoute,
+        setRoutes: (r, a = 0) => { setR(r); setActiveRoute(a); },
+        setActiveRoute, streetImage, setStreetImage, navigating, setNavigating,
       }}
     >
       {children}
@@ -78,12 +55,4 @@ export function useMapState() {
   const c = useContext(Ctx);
   if (!c) throw new Error("useMapState outside MapProvider");
   return c;
-}
-
-/**
- * For components that also render outside the map shell — the home screen search
- * box, for example. They must not assume a canvas exists.
- */
-export function useOptionalMapState() {
-  return useContext(Ctx);
 }
