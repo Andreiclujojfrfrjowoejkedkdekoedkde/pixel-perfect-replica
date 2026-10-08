@@ -265,3 +265,18 @@
   .homepage-content > section .h-12, .homepage-content > section button[aria-label] { display: none; }
   .homepage-content > section .gap-4 { gap: 0; }
 }
+@media (max-height: 500px) and (min-width: 640px) and (max-width: 1000px) {
+  .homepage { height: 100dvh; overflow: hidden; align-items: center; }
+  .homepage-content { max-width: 900px; gap: 10px; padding: 10px 24px; }
+  .homepage-content h1 { font-size: 32px; }
+  .homepage-content header p { margin-top: 0; }
+  .homepage-action { height: 78px; padding: 10px; border-radius: 12px; gap: 2px; }
+  .homepage-action > svg { width: 18px; height: 18px; margin-bottom: 0; }
+  .homepage-action .text-xs { display: none; }
+  .homepage-content > section { gap: 4px; }
+  .homepage-content > section .glass { padding: 4px 12px; }
+  .homepage-content > section .h-12 { height: 32px; width: 32px; }
+  .homepage-attribution { margin-top: 0; }
+  .homepage-attribution > span { display: none; }
+  .homepage-attribution > button { display: inline-flex; height: 24px; width: 24px; }
+}
