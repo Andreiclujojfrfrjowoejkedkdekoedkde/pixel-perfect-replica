@@ -36,7 +36,12 @@ export function MapCanvas() {
         canvasContextAttributes: { antialias: true },
       });
       map.addControl(new ml.ScaleControl({ maxWidth: 110, unit: settings.units === "imperial" ? "imperial" : "metric" }), "bottom-left");
-      map.on("moveend", () => storage.set("view", { c: map.getCenter().toArray(), z: map.getZoom() }));
+      // An exception inside a MapLibre event handler kills its render loop and
+      // freezes the map (no dragging). localStorage can throw when full or
+      // blocked, so keep every handler body in try/catch.
+      map.on("moveend", () => {
+        try { storage.set("view", { c: map.getCenter().toArray(), z: map.getZoom() }); } catch { /* storage full/blocked */ }
+      });
       map.on("style.load", () => st.bumpStyle());
       map.on("contextmenu", (e) => navigate({ to: "/place/$id", params: { id: `@${e.lngLat.lat.toFixed(6)},${e.lngLat.lng.toFixed(6)}` } }));
       map.on("click", async (e) => {
