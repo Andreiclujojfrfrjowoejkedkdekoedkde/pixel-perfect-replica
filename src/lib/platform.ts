@@ -59,7 +59,11 @@ export const storage = {
   },
   set(key: string, value: unknown) {
     if (typeof localStorage === "undefined") return;
-    localStorage.setItem(`meridian:${key}`, JSON.stringify(value));
+    try {
+      localStorage.setItem(`meridian:${key}`, JSON.stringify(value));
+    } catch {
+      // Storage full or blocked — never let this throw into a map event handler.
+    }
   },
 };
 
