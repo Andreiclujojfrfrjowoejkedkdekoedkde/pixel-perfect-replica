@@ -11,6 +11,6 @@ export const Route = createFileRoute("/_map/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  // The map shell renders the home panel itself.
+  // The shared shell renders the standalone homepage at the root.
   component: () => null,
 });
