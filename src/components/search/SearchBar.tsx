@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Search, X, Clock, Bookmark, MapPin, Settings as Cog } from "lucide-react";
+import { Search, X, Clock, Bookmark, MapPin, Settings as Cog, Navigation } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useMapState } from "@/components/map/MapContext";
 import { photonSearch, type Place } from "@/lib/services";
 import { useLibrary, library } from "@/lib/library";
@@ -14,7 +15,7 @@ function Highlight({ text, q }: { text: string; q: string }) {
   return <>{text.slice(0, i)}<mark className="bg-transparent font-semibold text-primary">{text.slice(i, i + q.length)}</mark>{text.slice(i + q.length)}</>;
 }
 
-export const SearchBar = forwardRef<HTMLInputElement>(function SearchBar(_, ref) {
+export const SearchBar = forwardRef<HTMLInputElement, { home?: boolean; onChoose?: (p: Place) => void }>(function SearchBar({ home = false, onChoose }, ref) {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [results, setResults] = useState<Place[]>([]);
@@ -66,6 +67,7 @@ export const SearchBar = forwardRef<HTMLInputElement>(function SearchBar(_, ref)
   const flat = groups.flatMap((g) => g.items);
 
   const choose = (p: Place) => {
+    if (onChoose) { setOpen(false); setQ(p.name); onChoose(p); return; }
     library.addRecent(p);
     setOpen(false);
     setQ(p.name);
@@ -77,7 +79,7 @@ export const SearchBar = forwardRef<HTMLInputElement>(function SearchBar(_, ref)
 
   return (
     <div ref={wrap} className="relative w-full">
-      <div className="glass flex h-12 items-center gap-2 rounded-2xl px-3">
+      <div className={`glass flex items-center gap-2 px-3 ${home ? "homepage-search h-[72px] rounded-2xl sm:px-6" : "h-12 rounded-2xl"}`}>
         <Search strokeWidth={1.5} className="h-5 w-5 shrink-0 text-muted-foreground" />
         <input
           ref={ref}
@@ -90,18 +92,18 @@ export const SearchBar = forwardRef<HTMLInputElement>(function SearchBar(_, ref)
             else if (e.key === "Enter" && flat[cursor]) choose(flat[cursor]);
             else if (e.key === "Escape") { setOpen(false); (e.target as HTMLInputElement).blur(); }
           }}
-          placeholder="Search places, addresses, coordinates"
+          placeholder={home ? "Where do you want to go?" : "Search places, addresses, coordinates"}
           aria-label="Search"
           role="combobox"
           aria-expanded={open}
           aria-controls="search-results"
           className="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
         />
-        {q && <button aria-label="Clear search" onClick={() => { setQ(""); setResults([]); }} className="text-muted-foreground hover:text-foreground"><X strokeWidth={1.5} className="h-5 w-5" /></button>}
-        <button aria-label="Settings" onClick={() => navigate({ to: "/settings" })} className="text-muted-foreground hover:text-foreground"><Cog strokeWidth={1.5} className="h-5 w-5" /></button>
+        {q && <Button variant="ghost" size="icon" aria-label="Clear search" onClick={() => { setQ(""); setResults([]); }} className="shrink-0 text-muted-foreground hover:text-foreground"><X strokeWidth={1.5} className="h-5 w-5" /></Button>}
+        {home ? <Button disabled={!flat.length} onClick={() => { const p = flat[cursor] ?? flat[0]; if (p) choose(p); }} className="shrink-0 rounded-full px-5"><Navigation strokeWidth={1.5} className="h-4 w-4" />Go</Button> : !onChoose && <Button variant="ghost" size="icon" aria-label="Settings" onClick={() => navigate({ to: "/settings" })} className="shrink-0 text-muted-foreground hover:text-foreground"><Cog strokeWidth={1.5} className="h-5 w-5" /></Button>}
       </div>
       {open && (groups.length > 0 || error) && (
-        <div id="search-results" role="listbox" className="surface absolute left-0 right-0 top-14 z-40 max-h-[60vh] overflow-y-auto rounded-2xl border py-2 shadow-xl">
+        <div id="search-results" role="listbox" className={`surface absolute left-0 right-0 z-40 max-h-[60vh] overflow-y-auto rounded-2xl border py-2 shadow-xl ${home ? "top-20" : "top-14"}`}>
           {error && <p className="px-4 py-2 text-sm text-muted-foreground">{error}</p>}
           {groups.map((g) => (
             <div key={g.label}>
@@ -109,13 +111,13 @@ export const SearchBar = forwardRef<HTMLInputElement>(function SearchBar(_, ref)
               {g.items.map((p) => {
                 const idx = flat.indexOf(p);
                 return (
-                  <button
+                   <Button variant="ghost"
                     key={g.label + p.id}
                     role="option"
                     aria-selected={idx === cursor}
                     onMouseEnter={() => setCursor(idx)}
                     onClick={() => choose(p)}
-                    className={`flex w-full items-start gap-3 px-4 py-2 text-left ${idx === cursor ? "bg-secondary" : ""}`}
+                     className={`flex h-auto w-full items-start justify-start gap-3 rounded-none px-4 py-2 text-left ${idx === cursor ? "bg-secondary" : ""}`}
                   >
                     <g.icon strokeWidth={1.5} className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                     <span className="min-w-0 flex-1">
@@ -123,7 +125,7 @@ export const SearchBar = forwardRef<HTMLInputElement>(function SearchBar(_, ref)
                       <span className="block truncate text-xs text-muted-foreground">{p.kind}{p.subtitle ? ` · ${p.subtitle}` : ""}</span>
                     </span>
                     {origin && <span className="tnum shrink-0 text-xs text-muted-foreground">{fmtDistance(haversine(origin, [p.lon, p.lat]), settings.units)}</span>}
-                  </button>
+                   </Button>
                 );
               })}
             </div>

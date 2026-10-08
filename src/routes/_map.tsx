@@ -6,6 +6,7 @@ import { Controls } from "@/components/map/Controls";
 import { SearchBar } from "@/components/search/SearchBar";
 import { BottomSheet } from "@/components/shell/BottomSheet";
 import { HomePanel } from "@/components/shell/HomePanel";
+import { HomeScreen } from "@/components/shell/HomeScreen";
 import { StreetViewer } from "@/components/map/StreetViewer";
 import { SpeedPill } from "@/components/nav/SpeedPill";
 import { NetworkBadge } from "@/components/shell/NetworkBadge";
@@ -47,6 +48,7 @@ function Shell() {
   const [layersOpen, setLayersOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const isHome = !!matchRoute({ to: "/" });
+  const isMap = !!matchRoute({ to: "/map" });
   const isPlace = !!matchRoute({ to: "/place/$id" });
   const isSettings = !!matchRoute({ to: "/settings" });
 
@@ -64,7 +66,9 @@ function Shell() {
     return () => removeEventListener("keydown", h);
   }, [map, layersOpen, isHome, navigating, navigate]);
 
-  const panelContent = bp === "xl" && isPlace ? <HomePanel /> : isHome ? <HomePanel /> : <Outlet />;
+  const panelContent = bp === "xl" && isPlace ? <HomePanel /> : isMap ? <HomePanel /> : <Outlet />;
+
+  if (isHome) return <main><GlassDefs /><HomeScreen /></main>;
 
   return (
     <main className="fixed inset-0 overflow-hidden bg-background">
@@ -92,7 +96,7 @@ function Shell() {
           )}
           {(
             <div className={picking || navigating ? "hidden" : "contents"}><BottomSheet snap={isHome ? "peek" : isSettings ? "full" : "half"} title="Results and details">
-              {isHome ? <HomePanel /> : <Outlet />}
+              {isMap ? <HomePanel /> : <Outlet />}
             </BottomSheet></div>
           )}
 
@@ -106,8 +110,8 @@ function Shell() {
               className={`absolute bottom-4 left-4 top-4 z-30 flex flex-col gap-3 transition-transform duration-300 ${bp === "xl" ? "w-[400px]" : "w-[360px]"} ${collapsed ? "-translate-x-[calc(100%+1rem)]" : ""} ${picking || navigating ? "hidden" : ""}`}
             >
               <SearchBar ref={searchRef} />
-              <div className={`glass min-h-0 overflow-hidden rounded-2xl ${isHome ? "home-glass flex-none" : "flex-1"}`}>
-                <div className={isHome ? "home-scroll relative overflow-y-auto" : "surface h-full overflow-y-auto"}>{panelContent}</div>
+              <div className={`glass min-h-0 overflow-hidden rounded-2xl ${isMap ? "flex-none" : "flex-1"}`}>
+                <div className={isMap ? "home-scroll relative overflow-y-auto" : "surface h-full overflow-y-auto"}>{panelContent}</div>
               </div>
               {bp === "xl" && (
                 <Button variant="ghost"
