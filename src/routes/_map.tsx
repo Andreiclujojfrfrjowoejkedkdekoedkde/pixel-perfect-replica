@@ -13,6 +13,8 @@ import { NetworkBadge } from "@/components/shell/NetworkBadge";
 import { GlassDefs } from "@/components/glass/GlassDefs";
 import { useSettings } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
+import { RoadReports } from "@/components/map/RoadReports";
+import { TrafficLayer } from "@/components/map/TrafficLayer";
 import { ChevronLeft, ChevronRight, MapPin, X } from "lucide-react";
 
 export const Route = createFileRoute("/_map")({
@@ -68,7 +70,7 @@ function Shell() {
 
   const panelContent = bp === "xl" && isPlace ? <HomePanel /> : isMap ? <HomePanel /> : <Outlet />;
 
-  if (isHome) return <main><GlassDefs /><HomeScreen /></main>;
+  if (isHome) return <main className="fixed inset-0 overflow-hidden bg-background"><GlassDefs /><div className="homepage-map absolute inset-0"><MapCanvas /></div><HomeScreen /></main>;
 
   return (
     <main className="fixed inset-0 overflow-hidden bg-background">
@@ -78,6 +80,8 @@ function Shell() {
       {!navigating && <Controls layersOpen={layersOpen} setLayersOpen={setLayersOpen} />}
       <SpeedPill />
       <StreetViewer />
+      <RoadReports />
+      <TrafficLayer />
       {picking && <div className="pointer-events-none absolute inset-x-3 top-4 z-50 flex justify-center">
         <div className="glass pointer-events-auto flex items-center gap-3 rounded-xl px-4 py-3">
           <MapPin className="h-5 w-5 text-primary" strokeWidth={1.5} />

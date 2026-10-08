@@ -25,12 +25,14 @@ export const library = {
     commit({ ...s, saved: has ? s.saved.filter((x) => x.id !== p.id) : [p, ...s.saved] });
   },
   addRecent(p: Place) {
+    if (!storage.get("privacy-v2", false) || !storage.get<{ locationHistory?: boolean }>("settings", {}).locationHistory) return;
     const s = load();
     commit({ ...s, recent: [p, ...s.recent.filter((x) => x.id !== p.id)].slice(0, 12) });
   },
   clearRecent() {
     commit({ ...load(), recent: [] });
   },
+  clearAll() { commit({ saved: [], recent: [] }); },
 };
 
 export function useLibrary(): Lists {

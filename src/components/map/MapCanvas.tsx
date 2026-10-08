@@ -20,6 +20,8 @@ export function MapCanvas() {
   modeRef.current = st.mode;
   const pickRef = useRef(st.pickPoint);
   pickRef.current = st.pickPoint;
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
 
   useEffect(() => {
     let cancelled = false;
@@ -42,7 +44,7 @@ export function MapCanvas() {
       // freezes the map (no dragging). localStorage can throw when full or
       // blocked, so keep every handler body in try/catch.
       map.on("moveend", () => {
-        try { storage.set("view", { c: map.getCenter().toArray(), z: map.getZoom() }); } catch { /* storage full/blocked */ }
+        try { if (settingsRef.current.locationHistory && !el.current?.closest(".homepage-map")) storage.set("view", { c: map.getCenter().toArray(), z: map.getZoom() }); } catch { /* storage full/blocked */ }
       });
       map.on("style.load", () => st.bumpStyle());
       map.on("contextmenu", (e) => {

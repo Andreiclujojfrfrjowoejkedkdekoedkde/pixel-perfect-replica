@@ -1,8 +1,11 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import { useSettings, env, type Settings } from "@/lib/settings";
 import { library } from "@/lib/library";
+import { Button } from "@/components/ui/button";
+import { storage } from "@/lib/platform";
+import { clearTrips } from "@/lib/trips";
 
 export const Route = createFileRoute("/_map/settings")({
   head: () => ({
@@ -39,7 +42,7 @@ function SettingsPage() {
     <input type="checkbox" className="h-4 w-4 accent-primary" checked={s[k] as boolean} onChange={(e) => update({ [k]: e.target.checked })} />
   );
   const select = <K extends keyof Settings>(k: K, opts: [Settings[K], string][]) => (
-    <select value={String(s[k])} onChange={(e) => update({ [k]: opts.find(([v]) => String(v) === e.target.value)![0] } as Partial<Settings>)} className="rounded-md border bg-background px-2 py-1 text-sm">
+    <select value={String(s[k])} onChange={(e) => { const option = opts.find(([v]) => String(v) === e.target.value); if (option) update({ [k]: option[0] } as Partial<Settings>); }} className="rounded-md border bg-background px-2 py-1 text-sm">
       {opts.map(([v, l]) => <option key={String(v)} value={String(v)}>{l}</option>)}
     </select>
   );
@@ -48,7 +51,7 @@ function SettingsPage() {
     <div className="pb-10">
       <header className="flex items-center justify-between px-5 pt-5">
         <h1 className="font-display text-2xl">Settings</h1>
-        <button onClick={() => navigate({ to: "/" })} aria-label="Close settings" className="text-muted-foreground hover:text-foreground"><X strokeWidth={1.5} /></button>
+        <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/" })} aria-label="Close settings" className="text-muted-foreground hover:text-foreground"><X strokeWidth={1.5} /></Button>
       </header>
       <Section title="General">
         <Row label="Units">{select("units", [["metric", "Kilometres"], ["imperial", "Miles"]])}</Row>
@@ -80,10 +83,21 @@ function SettingsPage() {
         <Row label="Keep search history">{toggle("locationHistory")}</Row>
         <div className="flex min-h-12 items-center justify-between py-2 text-sm">
           Recent searches
-          <button onClick={() => library.clearRecent()} className="text-primary hover:underline">Clear history</button>
+          <Button variant="ghost" onClick={() => library.clearRecent()} className="text-primary">Clear history</Button>
         </div>
+        <Row label="Save trip summaries">{toggle("tripHistory")}</Row>
+        <div className="flex flex-wrap gap-2 py-3"><Button asChild variant="outline"><Link to="/history">Trips & stats</Link></Button><Button asChild variant="outline"><Link to="/auth">Account & privacy</Link></Button></div>
+        <Button variant="destructive" className="my-3" onClick={() => { if (!window.confirm("Delete saved places, searches, shortcuts, local trip summaries and preferences on this device? Cloud travel data can be deleted in Account & privacy.")) return; library.clearAll(); clearTrips(); storage.clearPersonal(); update({ locationHistory: false, tripHistory: false, syncTrips: false }); }}>Delete my device data</Button>
+        <p className="py-3 text-xs text-muted-foreground">Trip summaries expire after 30 days. Routes and GPS traces are never saved. Cloud travel data can be deleted in Account & privacy.</p>
+      </Section>
+      <Section title="Vehicle">
+        <Row label="Profile">{select("vehicleType", [["car", "Car"], ["ev", "Electric car"], ["van", "Van"], ["truck", "Truck"]])}</Row>
+        {s.vehicleType === "ev" && <Row label="Full-charge range (km)"><input aria-label="EV range in kilometres" type="number" min={50} max={1000} value={s.evRangeKm} onChange={e => update({ evRangeKm: Math.max(50,Math.min(1000,Number(e.target.value)||50)) })} className="w-20 rounded-md border bg-background p-2" /></Row>}
+        {["van","truck"].includes(s.vehicleType) && <><Row label="Height (metres)"><input aria-label="Vehicle height in metres" type="number" min={1} max={6} step={0.1} value={s.vehicleHeight} onChange={e => update({ vehicleHeight: Math.max(1,Math.min(6,Number(e.target.value)||1)) })} className="w-20 rounded-md border bg-background p-2" /></Row><Row label="Weight (tonnes)"><input aria-label="Vehicle weight in tonnes" type="number" min={0.5} max={80} step={0.5} value={s.vehicleWeight} onChange={e => update({ vehicleWeight: Math.max(0.5,Math.min(80,Number(e.target.value)||0.5)) })} className="w-20 rounded-md border bg-background p-2" /></Row><p className="py-3 text-xs text-muted-foreground">Clearance-aware routes require a connection and mapped restrictions. Always obey road signs.</p></>}
       </Section>
       <Section title="Services">
+        <Row label="Live traffic overlay">{toggle("liveTraffic")}</Row>
+        <p className="py-3 text-xs text-muted-foreground">Live traffic uses TomTom coverage and an account key. Route times remain estimates unless the routing provider supplies traffic.</p>
         <p className="py-3 text-sm text-muted-foreground">
           {env.mapillary ? "Street imagery is connected." : "Street imagery is off. Add a Mapillary token to turn it on."}
         </p>

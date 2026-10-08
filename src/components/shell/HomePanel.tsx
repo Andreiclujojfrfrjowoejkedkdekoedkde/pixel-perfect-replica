@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Fuel, Utensils, ParkingSquare, PlugZap, Pill, BedDouble, Bookmark, Clock, Navigation, Compass, ArrowUpRight, Download } from "lucide-react";
+import { Fuel, Utensils, ParkingSquare, PlugZap, Pill, BedDouble, Bookmark, Clock, Navigation, Compass, ArrowUpRight, Download, ChevronDown, ChevronRight } from "lucide-react";
 import { useMapState } from "@/components/map/MapContext";
 import { CATEGORIES, nearbyCategory, type Place } from "@/lib/services";
 import { useLibrary, library } from "@/lib/library";
@@ -18,6 +18,8 @@ export function HomePanel() {
   const [active, setActive] = useState<string | null>(null);
   const [results, setResults] = useState<Place[]>([]);
   const [status, setStatus] = useState<string | null>(null);
+  const [savedOpen, setSavedOpen] = useState(false);
+  const [recentOpen, setRecentOpen] = useState(false);
 
   const request = useRef<AbortController | null>(null);
   const cache = useRef(new Map<string, { time: number; places: Place[] }>());
@@ -115,17 +117,12 @@ export function HomePanel() {
             <Button asChild variant="ghost" className="mt-2 h-10 w-full justify-start text-muted-foreground"><Link to="/offline"><Download strokeWidth={1.5} /> Offline maps <ArrowUpRight className="ml-auto" /></Link></Button>
           </div>
           <section className="pt-5">
-            <h2 className="smallcaps px-5 text-xs text-muted-foreground">Saved</h2>
-            <div className="hairline mx-5 mt-2" />
-            {saved.length ? saved.map((p) => <Row key={p.id} p={p} icon={Bookmark} />) : <div className="flex items-center gap-3 px-5 py-5"><Bookmark strokeWidth={1.5} className="h-5 w-5 text-muted-foreground" /><p className="text-sm text-muted-foreground">No saved places yet</p></div>}
+            <Button variant="ghost" onClick={() => setSavedOpen(v => !v)} aria-expanded={savedOpen} aria-controls="saved-places" className="h-9 w-full justify-between px-5"><span className="smallcaps text-xs text-muted-foreground">Saved <span className="tnum ml-2">{saved.length}</span></span>{savedOpen ? <ChevronDown strokeWidth={1.5} /> : <ChevronRight strokeWidth={1.5} />}</Button>
+            {savedOpen && <div id="saved-places"><div className="hairline mx-5 mt-2" />{saved.length ? saved.map((p) => <Row key={p.id} p={p} icon={Bookmark} />) : <p className="px-5 py-4 text-sm text-muted-foreground">No saved places yet</p>}</div>}
           </section>
           <section className="pt-5">
-            <div className="flex items-baseline justify-between px-5">
-              <h2 className="smallcaps text-xs text-muted-foreground">Recent</h2>
-              {recent.length > 0 && <Button variant="ghost" onClick={() => library.clearRecent()} className="text-xs text-muted-foreground hover:text-foreground">Clear</Button>}
-            </div>
-            <div className="hairline mx-5 mt-2" />
-            {recent.length ? recent.map((p) => <Row key={p.id} p={p} icon={Clock} />) : <div className="flex items-center gap-3 px-5 py-5"><Clock strokeWidth={1.5} className="h-5 w-5 text-muted-foreground" /><p className="text-sm text-muted-foreground">No recent searches</p></div>}
+            <Button variant="ghost" onClick={() => setRecentOpen(v => !v)} aria-expanded={recentOpen} aria-controls="recent-places" className="h-9 w-full justify-between px-5"><span className="smallcaps text-xs text-muted-foreground">Recent <span className="tnum ml-2">{recent.length}</span></span>{recentOpen ? <ChevronDown strokeWidth={1.5} /> : <ChevronRight strokeWidth={1.5} />}</Button>
+            {recentOpen && <div id="recent-places"><div className="hairline mx-5 mt-2" />{recent.length ? <>{recent.map((p) => <Row key={p.id} p={p} icon={Clock} />)}<Button variant="ghost" onClick={() => library.clearRecent()} className="mx-5 text-xs text-muted-foreground">Clear</Button></> : <p className="px-5 py-4 text-sm text-muted-foreground">No recent searches</p>}</div>}
           </section>
         </>
       )}

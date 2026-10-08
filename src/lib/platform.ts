@@ -57,6 +57,10 @@ export const storage = {
       // Storage full or blocked — never let this throw into a map event handler.
     }
   },
+  clearPersonal() {
+    if (typeof localStorage === "undefined") return;
+    try { for (const key of ["saved","recent","trips","shortcuts","settings","view","privacy-v2","trip-sync-owner"]) localStorage.removeItem(`meridian:${key}`); window.dispatchEvent(new Event("meridian-personal-cleared")); } catch { /* blocked storage */ }
+  },
 };
 
 export const network = {

@@ -24,6 +24,13 @@ export type Settings = {
   autoNight: boolean;
   leftHanded: boolean;
   locationHistory: boolean;
+  tripHistory: boolean;
+  syncTrips: boolean;
+  vehicleType: "car" | "ev" | "van" | "truck";
+  evRangeKm: number;
+  vehicleHeight: number;
+  vehicleWeight: number;
+  liveTraffic: boolean;
 };
 
 export const defaultSettings: Settings = {
@@ -45,7 +52,14 @@ export const defaultSettings: Settings = {
   keepScreenOn: true,
   autoNight: true,
   leftHanded: false,
-  locationHistory: true,
+  locationHistory: false,
+  tripHistory: false,
+  syncTrips: false,
+  vehicleType: "car",
+  evRangeKm: 300,
+  vehicleHeight: 2,
+  vehicleWeight: 3.5,
+  liveTraffic: false,
 };
 
 type Ctx = { settings: Settings; update: (p: Partial<Settings>) => void; dark: boolean };
@@ -56,7 +70,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [systemDark, setSystemDark] = useState(false);
 
   useEffect(() => {
-    setSettings({ ...defaultSettings, ...storage.get<Partial<Settings>>("settings", {}) });
+    const stored = storage.get<Partial<Settings>>("settings", {});
+    const privacyChosen = storage.get("privacy-v2", false);
+    setSettings({ ...defaultSettings, ...stored, ...(!privacyChosen ? { locationHistory: false, tripHistory: false, syncTrips: false } : {}) });
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     setSystemDark(mq.matches);
     const h = (e: MediaQueryListEvent) => setSystemDark(e.matches);
@@ -73,6 +89,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const update = (p: Partial<Settings>) =>
     setSettings((s) => {
       const n = { ...s, ...p };
+      if ("locationHistory" in p || "tripHistory" in p) storage.set("privacy-v2", true);
       storage.set("settings", n);
       return n;
     });

@@ -11,6 +11,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import { SettingsProvider } from "../lib/settings";
+import { AccountProvider } from "../lib/account";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -120,7 +121,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <SettingsProvider>
-        <Outlet />
+        <AccountProvider><Outlet /></AccountProvider>
       </SettingsProvider>
     </QueryClientProvider>
   );
