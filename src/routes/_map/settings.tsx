@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { clearTrips } from "@/lib/trips";
 
 export const Route = createFileRoute("/_map/settings")({
-  validateSearch: (search: Record<string, unknown>): { from?: "home" | "map" } => ({ from: search.from === "home" ? "home" : "map" }),
+  validateSearch: (search: Record<string, unknown>): { from?: "home" | "map" } => ({ from: search["from"] === "home" ? "home" : "map" }),
   head: () => ({
     meta: [
       { title: "Settings — Meridian" },
@@ -36,7 +36,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
-  return <label className="flex min-h-12 items-center justify-between gap-4 py-2 text-sm">{label}<span className="shrink-0">{children}</span></label>;
+  return <div className="flex min-h-12 items-center justify-between gap-4 py-2 text-sm"><span>{label}</span><span className="shrink-0">{children}</span></div>;
 }
 
 function SettingsPage() {
