@@ -20,11 +20,13 @@ export function HomePanel() {
   const [status, setStatus] = useState<string | null>(null);
   const [savedOpen, setSavedOpen] = useState(false);
   const [recentOpen, setRecentOpen] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   const request = useRef<AbortController | null>(null);
   const cache = useRef(new Map<string, { time: number; places: Place[] }>());
-  const runCategory = async (id: string, tag: string) => {
-    if (active === id) { setActive(null); setResults([]); setMarkers([]); return; }
+  const runCategory = (id: string) => {
+    request.current?.abort();
+    if (active === id) { setActive(null); setResults([]); setMarkers([]); setStatus(null); return; }
     setActive(id);
   };
 
@@ -38,7 +40,9 @@ export function HomePanel() {
       request.current?.abort();
       const b = map.getBounds();
       setResults([]); setMarkers([]);
-      if (map.getZoom() < 11 || b.getEast() - b.getWest() > 1 || b.getNorth() - b.getSouth() > 1) {
+      const width = haversine([b.getWest(), b.getCenter().lat], [b.getEast(), b.getCenter().lat]);
+      const height = haversine([b.getCenter().lng, b.getSouth()], [b.getCenter().lng, b.getNorth()]);
+      if (map.getZoom() < 11 || width * height > 2500000000) {
         setStatus("Zoom in to see places in this area."); return;
       }
       const bounds: [number, number, number, number] = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
@@ -64,7 +68,7 @@ export function HomePanel() {
     };
     void load(); map.on("moveend", schedule);
     return () => { disposed = true; clearTimeout(timer); request.current?.abort(); map.off("moveend", schedule); };
-  }, [map, active, setMarkers]);
+  }, [map, active, retry, setMarkers]);
 
   const origin: [number, number] | null = position ? [position.lon, position.lat] : map ? (map.getCenter().toArray() as [number, number]) : null;
 
@@ -94,7 +98,7 @@ export function HomePanel() {
           return (
             <Button variant="ghost"
               key={c.id}
-              onClick={() => runCategory(c.id, c.tag)}
+               onClick={() => runCategory(c.id)}
               aria-pressed={active === c.id}
               className={`home-category h-11 min-w-0 gap-1.5 rounded-lg border px-2 text-xs ${active === c.id ? "border-primary bg-primary text-primary-foreground" : "glass hover:border-primary/40 hover:text-primary"}`}
             >
@@ -103,7 +107,7 @@ export function HomePanel() {
           );
         })}
       </div>
-      {status && <p className="px-5 pb-2 text-sm text-muted-foreground">{status}</p>}
+      {status && <div role="status" className="px-5 pb-2 text-sm text-muted-foreground"><p>{status}</p>{status.includes("retry") && <Button variant="ghost" size="sm" className="mt-1 text-primary" onClick={() => setRetry(v => v + 1)}>Retry search</Button>}</div>}
 
       {results.length > 0 ? (
         <section>

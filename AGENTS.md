@@ -30,3 +30,4 @@
 - Commercial-vehicle routing never falls back to the incomplete offline engine; EV stops are real POIs and explicitly unverified suggestions. Why: avoid implying clearance or charging guarantees.
 - Traffic tiles proxy a server-only provider credential; TrafficLayer is mounted only in the map experience, respects the user's opt-in toggle and removes its layers on unmount; flow colors do not alter the Valhalla ETA. Why: keep traffic off homepage backgrounds and avoid implying traffic-aware routing.
 - Map-origin Preferences blur is tied to panel visibility, not just its route. Why: hiding the panel must restore a clear interactive map.
+- MapCanvas and TrafficLayer share overlay ordering after updates and refreshes; route casing, direction chevrons, places and location stay above traffic. Why: traffic must never obscure navigation.

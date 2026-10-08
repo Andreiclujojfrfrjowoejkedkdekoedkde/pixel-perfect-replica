@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import type { GeoJSONSource, Map as MLMap } from "maplibre-gl";
 import { useMapState } from "./MapContext";
 import { useSettings, env } from "@/lib/settings";
-import { buildStyle, routeColor, altRouteColor } from "@/lib/mapStyle";
+import { buildStyle, routeColor, altRouteColor, routeRimColor, routeArrowColor, orderMapOverlays } from "@/lib/mapStyle";
 import { mapillaryImageNear } from "@/lib/services";
 import { storage } from "@/lib/platform";
 
@@ -112,8 +112,9 @@ export function MapCanvas() {
     lines.sort((a, b) => Number(a.properties?.["active"] ?? 0) - Number(b.properties?.["active"] ?? 0));
     set("meridian-route", { type: "FeatureCollection", features: lines });
     if (!map.getLayer("meridian-route-case")) {
-      map.addLayer({ id: "meridian-route-case", type: "line", source: "meridian-route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": dark ? "#1B1612" : "#FBF6EC", "line-width": ["interpolate", ["linear"], ["zoom"], 8, 6, 16, 14] } });
-      map.addLayer({ id: "meridian-route-line", type: "line", source: "meridian-route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ["case", ["==", ["get", "active"], 1], routeColor(dark), altRouteColor(dark)], "line-width": ["interpolate", ["linear"], ["zoom"], 8, 3.5, 16, 9] } });
+      map.addLayer({ id: "meridian-route-case", type: "line", source: "meridian-route", layout: { "line-cap": "round", "line-join": "round", "line-sort-key": ["get", "active"] }, paint: { "line-color": routeRimColor(dark), "line-width": ["interpolate", ["linear"], ["zoom"], 8, 7, 13, 10, 17, 16], "line-opacity": 0.95 } });
+      map.addLayer({ id: "meridian-route-line", type: "line", source: "meridian-route", layout: { "line-cap": "round", "line-join": "round", "line-sort-key": ["get", "active"] }, paint: { "line-color": ["case", ["==", ["get", "active"], 1], routeColor(dark), altRouteColor(dark)], "line-width": ["interpolate", ["linear"], ["zoom"], 8, 4, 13, 6, 17, 11], "line-opacity": ["case", ["==", ["get", "active"], 1], 1, 0.7] } });
+      map.addLayer({ id: "meridian-route-arrows", type: "symbol", source: "meridian-route", minzoom: 12, filter: ["==", ["get", "active"], 1], layout: { "symbol-placement": "line", "symbol-spacing": 100, "text-field": "›", "text-font": ["Noto Sans Bold"], "text-size": 23, "text-keep-upright": false, "text-rotation-alignment": "map", "text-pitch-alignment": "map", "text-allow-overlap": true, "text-ignore-placement": true }, paint: { "text-color": routeArrowColor(), "text-halo-color": routeColor(dark), "text-halo-width": 1 } });
     }
 
     set("meridian-markers", {
@@ -136,6 +137,7 @@ export function MapCanvas() {
       map.addLayer({ id: "meridian-me-halo", type: "circle", source: "meridian-me", paint: { "circle-radius": 18, "circle-color": routeColor(dark), "circle-opacity": 0.15 } });
       map.addLayer({ id: "meridian-me", type: "circle", source: "meridian-me", paint: { "circle-radius": 7, "circle-color": routeColor(dark), "circle-stroke-color": "#FBF6EC", "circle-stroke-width": 3 } });
     }
+    orderMapOverlays(map);
   }, [st.map, st.styleVersion, st.routes, st.activeRoute, st.markers, st.position, dark]);
 
   return (

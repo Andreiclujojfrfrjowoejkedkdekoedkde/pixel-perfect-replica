@@ -41,9 +41,9 @@ export function inside(p: [number, number], bbox: Bbox) { return p[0] >= bbox[0]
 export function regionArea(b: Bbox) { return haversine([b[0], b[1]], [b[2], b[1]]) * haversine([b[0], b[1]], [b[0], b[3]]) / 1e6; }
 
 export async function overpass(query: string, signal?: AbortSignal): Promise<{ elements: Element[] }> {
-  for (const host of ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]) {
+  for (const host of ["https://overpass.kumi.systems/api/interpreter", "https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"]) {
     if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
-    const timeout = AbortSignal.timeout(25000);
+    const timeout = AbortSignal.timeout(22000);
     try {
       const r = await fetch(host, { method: "POST", body: new URLSearchParams({ data: query }), signal: signal ? AbortSignal.any([signal, timeout]) : timeout });
       if (!r.ok) continue;

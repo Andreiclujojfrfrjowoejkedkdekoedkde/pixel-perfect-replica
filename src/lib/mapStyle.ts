@@ -1,4 +1,4 @@
-import type { StyleSpecification, LayerSpecification } from "maplibre-gl";
+import type { StyleSpecification, LayerSpecification, Map as MLMap } from "maplibre-gl";
 import type { MapMode } from "./settings";
 import { env } from "./settings";
 
@@ -153,3 +153,16 @@ export function buildStyle(mode: MapMode, o: { dark: boolean; buildings3d: boole
 
 export const routeColor = (dark: boolean) => (dark ? "#D2692A" : "#B5501B");
 export const altRouteColor = (dark: boolean) => (dark ? "#6B5D4E" : "#A39684");
+export const routeRimColor = (dark: boolean) => (dark ? "#1B1612" : "#FBF6EC");
+export const routeArrowColor = () => "#FBF6EC";
+
+// Traffic belongs below labels and all interactive navigation overlays, even
+// when it refreshes or the base style is replaced.
+export function orderMapOverlays(map: MLMap) {
+  const layers = map.getStyle()?.layers ?? [];
+  const firstLabel = layers.find(l => l.type === "symbol" && !l.id.startsWith("meridian-"))?.id;
+  if (map.getLayer("live-traffic") && firstLabel) map.moveLayer("live-traffic", firstLabel);
+  for (const id of ["meridian-route-case", "meridian-route-line", "meridian-route-arrows", "meridian-clusters", "meridian-cluster-count", "meridian-markers", "meridian-marker-labels", "meridian-me-halo", "meridian-me"]) {
+    if (map.getLayer(id)) map.moveLayer(id);
+  }
+}
