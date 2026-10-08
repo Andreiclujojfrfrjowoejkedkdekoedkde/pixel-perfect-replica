@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as MapRouteImport } from './routes/_map'
 import { Route as MapIndexRouteImport } from './routes/_map/index'
 import { Route as MapDirectionsRouteImport } from './routes/_map/directions'
+import { Route as MapMapRouteImport } from './routes/_map/map'
 import { Route as MapOfflineRouteImport } from './routes/_map/offline'
 import { Route as MapSettingsRouteImport } from './routes/_map/settings'
 import { Route as MapPlaceIdRouteImport } from './routes/_map/place.$id'
@@ -28,6 +29,11 @@ const MapIndexRoute = MapIndexRouteImport.update({
 const MapDirectionsRoute = MapDirectionsRouteImport.update({
   id: '/directions',
   path: '/directions',
+  getParentRoute: () => MapRoute,
+} as any)
+const MapMapRoute = MapMapRouteImport.update({
+  id: '/map',
+  path: '/map',
   getParentRoute: () => MapRoute,
 } as any)
 const MapOfflineRoute = MapOfflineRouteImport.update({
@@ -49,12 +55,14 @@ const MapPlaceIdRoute = MapPlaceIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof MapIndexRoute
   '/directions': typeof MapDirectionsRoute
+  '/map': typeof MapMapRoute
   '/offline': typeof MapOfflineRoute
   '/settings': typeof MapSettingsRoute
   '/place/$id': typeof MapPlaceIdRoute
 }
 export interface FileRoutesByTo {
   '/directions': typeof MapDirectionsRoute
+  '/map': typeof MapMapRoute
   '/offline': typeof MapOfflineRoute
   '/settings': typeof MapSettingsRoute
   '/': typeof MapIndexRoute
@@ -64,6 +72,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_map': typeof MapRouteWithChildren
   '/_map/directions': typeof MapDirectionsRoute
+  '/_map/map': typeof MapMapRoute
   '/_map/offline': typeof MapOfflineRoute
   '/_map/settings': typeof MapSettingsRoute
   '/_map/': typeof MapIndexRoute
@@ -71,13 +80,15 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/directions' | '/offline' | '/settings' | '/place/$id'
+  fullPaths:
+    '/' | '/directions' | '/map' | '/offline' | '/settings' | '/place/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/directions' | '/offline' | '/settings' | '/' | '/place/$id'
+  to: '/directions' | '/map' | '/offline' | '/settings' | '/' | '/place/$id'
   id:
     | '__root__'
     | '/_map'
     | '/_map/directions'
+    | '/_map/map'
     | '/_map/offline'
     | '/_map/settings'
     | '/_map/'
@@ -111,6 +122,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MapDirectionsRouteImport
       parentRoute: typeof MapRoute
     }
+    '/_map/map': {
+      id: '/_map/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapMapRouteImport
+      parentRoute: typeof MapRoute
+    }
     '/_map/offline': {
       id: '/_map/offline'
       path: '/offline'
@@ -137,6 +155,7 @@ declare module '@tanstack/react-router' {
 
 interface MapRouteChildren {
   MapDirectionsRoute: typeof MapDirectionsRoute
+  MapMapRoute: typeof MapMapRoute
   MapOfflineRoute: typeof MapOfflineRoute
   MapSettingsRoute: typeof MapSettingsRoute
   MapIndexRoute: typeof MapIndexRoute
@@ -145,6 +164,7 @@ interface MapRouteChildren {
 
 const MapRouteChildren: MapRouteChildren = {
   MapDirectionsRoute: MapDirectionsRoute,
+  MapMapRoute: MapMapRoute,
   MapOfflineRoute: MapOfflineRoute,
   MapSettingsRoute: MapSettingsRoute,
   MapIndexRoute: MapIndexRoute,

@@ -4,7 +4,7 @@
 - [x] Live rectangle preview and draggable corner points
 - [x] Preserve transparent map menu without wave decoration
 - [x] Viewport-only category places and expandable clusters
-- [ ] Separate glass homepage following uploaded mockup — awaiting visual selection
+- [x] Separate Glass Meridian homepage following uploaded mockup, working search and saved home/work shortcuts
 - [x] Live driving dashboard, accurate route progress, location-follow camera and recenter
 - [x] Select start, destination and intermediate stops on the map
 - [x] Reliable nearby categories with regional POI downloads (no global bulk import)
