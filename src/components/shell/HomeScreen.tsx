@@ -30,9 +30,9 @@ export function HomeScreen() {
   return <div className="homepage fixed inset-0 z-40 flex items-center justify-center overflow-y-auto">
     <div className="homepage-map-wash pointer-events-none absolute inset-0" aria-hidden="true" />
     <div className="homepage-content relative z-10 flex w-full max-w-4xl flex-col gap-8 px-5 py-10 sm:gap-10 sm:px-8 sm:py-12">
-      <header className="flex items-start justify-between gap-4">
-        <div><h1 className="font-display text-5xl leading-tight">Meridian</h1><p className="mt-2 text-[10px] font-semibold uppercase text-muted-foreground">A living atlas of the world</p></div>
-        <div className="homepage-account flex shrink-0 items-center gap-2"><Button asChild variant="ghost" className="glass h-10 gap-2 rounded-lg px-3 text-xs" disabled={!ready}><Link to="/auth"><UserRound strokeWidth={1.5} className="h-4 w-4" /><span>{user ? "My account" : "Log in / Sign up"}</span></Link></Button><Button asChild variant="ghost" size="icon" className="glass h-10 w-10 rounded-lg" title="Preferences"><Link to="/settings" search={{ from: "home" }} aria-label="Preferences"><Settings strokeWidth={1.5} className="h-4 w-4" /></Link></Button></div>
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:justify-between">
+        <div className="min-w-0"><h1 className="font-display text-5xl leading-tight">Meridian</h1><p className="mt-2 text-[10px] font-semibold uppercase text-muted-foreground">A living atlas of the world</p></div>
+        <div className="homepage-account flex shrink-0 items-center gap-2"><Button asChild variant="ghost" className="glass h-10 gap-2 rounded-lg px-3 text-xs" disabled={!ready}><Link to="/auth" aria-label={user ? "My account" : "Log in / Sign up"} title={user ? "My account" : "Log in / Sign up"}><UserRound strokeWidth={1.5} className="h-4 w-4" /><span>{user ? "My account" : "Log in / Sign up"}</span></Link></Button><Button asChild variant="ghost" size="icon" className="glass h-10 w-10 rounded-lg" title="Preferences"><Link to="/settings" search={{ from: "home" }} aria-label="Preferences"><Settings strokeWidth={1.5} className="h-4 w-4" /></Link></Button></div>
       </header>
       <div className="relative z-20"><SearchBar home /></div>
       <nav aria-label="Main actions" className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-5">
@@ -52,7 +52,7 @@ export function HomeScreen() {
       </section>
       <footer className="homepage-attribution mt-4 flex items-center justify-center text-center text-[10px] leading-relaxed text-muted-foreground"><span className="hidden sm:inline">Map data © OpenStreetMap contributors. Routing by Valhalla. Search by Photon.</span><Button variant="ghost" size="icon" className="glass h-8 w-8 rounded-full sm:hidden" aria-label="Map information" title="Map information" onClick={() => setInfoOpen(true)}><Info strokeWidth={1.5} className="h-4 w-4" /></Button></footer>
     </div>
-    <Dialog open={infoOpen} onOpenChange={setInfoOpen}><DialogContent className="glass"><DialogTitle>Map information</DialogTitle><DialogDescription>Map data © OpenStreetMap contributors. Tiles by OpenFreeMap. Routing by Valhalla. Search by Photon (komoot).</DialogDescription></DialogContent></Dialog>
+    <Dialog open={infoOpen} onOpenChange={setInfoOpen}><DialogContent className="glass"><DialogTitle>Map information</DialogTitle><DialogDescription>Map data © OpenStreetMap contributors. Tiles by OpenFreeMap. Live traffic © TomTom, where available. Routing by Valhalla. Search by Photon (komoot).</DialogDescription></DialogContent></Dialog>
     <Dialog open={!!editing} onOpenChange={open => { if (!open) setEditing(null); }}><DialogContent className="max-w-[calc(100vw-32px)] sm:max-w-lg"><DialogTitle>Set {editing} address</DialogTitle><DialogDescription>Search for your {editing} address.</DialogDescription><SearchBar key={editing} onChoose={save} />{editing && shortcuts[editing] && <Button variant="ghost" className="text-destructive" onClick={() => { if (!editing) return; const next = { ...shortcuts }; delete next[editing]; storage.set("shortcuts", next); setShortcuts(next); setEditing(null); }}>Remove address</Button>}</DialogContent></Dialog>
   </div>;
 }

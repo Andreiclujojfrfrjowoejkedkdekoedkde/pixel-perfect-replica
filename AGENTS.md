@@ -28,4 +28,4 @@
 - ETA share tokens expose only time/distance through a narrow RPC, never owner IDs or coordinates; authenticated writes and hard expiry control access. Why: share arrival without sharing whereabouts.
 - Report posting and voting use authenticated server functions and database validation triggers; public bounds RPCs project only report content, while daily cleanup removes expired travel records. Why: enforce privacy, limits, and moderation beyond client controls.
 - Commercial-vehicle routing never falls back to the incomplete offline engine; EV stops are real POIs and explicitly unverified suggestions. Why: avoid implying clearance or charging guarantees.
-- Traffic tiles proxy a server-only provider credential; flow colors do not alter the Valhalla ETA. Why: a visual traffic overlay is not traffic-aware routing.
+- Traffic tiles proxy a server-only provider credential; the shared TrafficLayer accepts a homepage override without changing the user's map toggle and removes its layers on unmount; flow colors do not alter the Valhalla ETA. Why: reuse real traffic without leaking layers between screens or implying traffic-aware routing.
