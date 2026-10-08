@@ -108,7 +108,7 @@
 @utility tnum { font-variant-numeric: tabular-nums; }
 @utility smallcaps {
   font-variant-caps: all-small-caps;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   font-weight: 600;
 }
 @utility hairline { border-color: var(--border); border-width: 0; border-top-width: 1px; }
@@ -206,3 +206,12 @@
 .trip-progress::-webkit-progress-bar { background: var(--secondary); }
 .trip-progress::-webkit-progress-value { background: var(--primary); border-radius: 8px; }
 .trip-progress::-moz-progress-bar { background: var(--primary); }
+
+.home-glass { background: color-mix(in oklch, var(--card) 72%, transparent); }
+.home-scroll { max-height: calc(100dvh - 100px); }
+.glass > .water-reflection { position: absolute; inset: -60px -30px; width: calc(100% + 60px); height: calc(100% + 120px); z-index: 0; pointer-events: none; color: var(--water); opacity: 0.2; animation: water-drift 16s ease-in-out infinite alternate; }
+.home-directions { box-shadow: inset 0 1px 0 var(--glass-rim), 0 4px 12px var(--glass-shade); }
+.home-category { box-shadow: inset 0 1px 0 var(--glass-rim); }
+.home-panel { letter-spacing: 0; }
+@keyframes water-drift { from { transform: translateY(-15px) rotate(-4deg); } to { transform: translateY(25px) rotate(4deg); } }
+@media (prefers-reduced-motion: reduce) { .glass > .water-reflection { animation: none; } }

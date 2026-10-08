@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Fuel, Utensils, ParkingSquare, PlugZap, Pill, BedDouble, Bookmark, Clock, Navigation } from "lucide-react";
+import { Fuel, Utensils, ParkingSquare, PlugZap, Pill, BedDouble, Bookmark, Clock, Navigation, Compass, ArrowUpRight, Download } from "lucide-react";
 import { useMapState } from "@/components/map/MapContext";
 import { CATEGORIES, nearbyCategory, type Place } from "@/lib/services";
 import { useLibrary, library } from "@/lib/library";
@@ -60,8 +60,12 @@ export function HomePanel() {
   );
 
   return (
-    <div className="pb-6">
-      <div className="flex gap-2 overflow-x-auto px-5 pb-3 pt-4" role="toolbar" aria-label="Nearby categories">
+    <div className="home-panel pb-6">
+      <header className="flex items-center justify-between px-5 pb-4 pt-5">
+        <div><h1 className="font-display text-3xl">Meridian</h1><p className="mt-1 text-xs text-muted-foreground">Your atlas, in motion</p></div>
+        <Compass strokeWidth={1.5} className="h-9 w-9 text-primary" />
+      </header>
+      <div className="grid grid-cols-3 gap-2 px-5 pb-4" role="toolbar" aria-label="Nearby categories">
         {CATEGORIES.map((c) => {
           const Icon = ICONS[c.id];
           return (
@@ -69,7 +73,7 @@ export function HomePanel() {
               key={c.id}
               onClick={() => runCategory(c.id, c.tag)}
               aria-pressed={active === c.id}
-              className={`h-auto flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${active === c.id ? "border-primary bg-primary text-primary-foreground" : "hover:border-foreground/40"}`}
+              className={`home-category h-11 min-w-0 gap-1.5 rounded-lg border px-2 text-xs ${active === c.id ? "border-primary bg-primary text-primary-foreground" : "glass hover:border-primary/40 hover:text-primary"}`}
             >
               <Icon strokeWidth={1.5} className="h-4 w-4" /> {c.label}
             </Button>
@@ -86,14 +90,13 @@ export function HomePanel() {
       ) : (
         <>
           <div className="px-5 pt-2">
-            <Link to="/directions" className="flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
-              <Navigation strokeWidth={1.5} className="h-4 w-4" /> Directions
-            </Link>
+            <Button asChild className="home-directions h-12 w-full justify-start rounded-lg"><Link to="/directions"><Navigation strokeWidth={1.5} /> Directions <ArrowUpRight className="ml-auto" /></Link></Button>
+            <Button asChild variant="ghost" className="mt-2 h-10 w-full justify-start text-muted-foreground"><Link to="/offline"><Download strokeWidth={1.5} /> Offline maps <ArrowUpRight className="ml-auto" /></Link></Button>
           </div>
           <section className="pt-5">
             <h2 className="smallcaps px-5 text-xs text-muted-foreground">Saved</h2>
             <div className="hairline mx-5 mt-2" />
-            {saved.length ? saved.map((p) => <Row key={p.id} p={p} icon={Bookmark} />) : <p className="px-5 py-3 text-sm text-muted-foreground">Places you save appear here.</p>}
+            {saved.length ? saved.map((p) => <Row key={p.id} p={p} icon={Bookmark} />) : <div className="flex items-center gap-3 px-5 py-5"><Bookmark strokeWidth={1.5} className="h-5 w-5 text-muted-foreground" /><p className="text-sm text-muted-foreground">No saved places yet</p></div>}
           </section>
           <section className="pt-5">
             <div className="flex items-baseline justify-between px-5">
@@ -101,7 +104,7 @@ export function HomePanel() {
               {recent.length > 0 && <Button variant="ghost" onClick={() => library.clearRecent()} className="text-xs text-muted-foreground hover:text-foreground">Clear</Button>}
             </div>
             <div className="hairline mx-5 mt-2" />
-            {recent.length ? recent.map((p) => <Row key={p.id} p={p} icon={Clock} />) : <p className="px-5 py-3 text-sm text-muted-foreground">No recent searches. Press / to search, or right-click the map to drop a pin.</p>}
+            {recent.length ? recent.map((p) => <Row key={p.id} p={p} icon={Clock} />) : <div className="flex items-center gap-3 px-5 py-5"><Clock strokeWidth={1.5} className="h-5 w-5 text-muted-foreground" /><p className="text-sm text-muted-foreground">No recent searches</p></div>}
           </section>
         </>
       )}
