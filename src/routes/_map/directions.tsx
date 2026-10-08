@@ -211,7 +211,7 @@ function Directions() {
         {routes.map((r, i) => (
           <li key={i}>
             <Button variant="ghost" onClick={() => setActiveRoute(i)} aria-pressed={i === activeRoute}
-              className={`flex w-full items-center gap-3 border-l-4 px-5 py-3 text-left ${i === activeRoute ? "border-primary bg-secondary/60" : "border-transparent hover:bg-secondary/40"}`}>
+              className={`h-auto min-h-16 justify-start whitespace-normal rounded-none flex w-full items-center gap-3 border-l-4 px-5 py-3 text-left ${i === activeRoute ? "border-primary bg-secondary/60" : "border-transparent hover:bg-secondary/40"}`}>
               <span className="flex-1">
                 <span className={`tnum block font-display text-xl ${i === activeRoute ? "text-primary" : ""}`}>{fmtDuration(r.duration)}</span>
                 <span className="tnum text-xs text-muted-foreground">{fmtDistance(r.distance, settings.units)}{i > 0 && best ? ` · ${r.duration >= best.duration ? "+" : "-"}${fmtDuration(Math.abs(r.duration - best.duration))}` : " · fastest"}</span>
