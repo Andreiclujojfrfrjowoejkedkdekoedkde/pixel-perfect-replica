@@ -1,6 +1,10 @@
 # Meridian roadmap
 
 ## Current improvements
+- [ ] Slow city-wide horizontal/vertical background passes, shared by homepage-opened Preferences
+- [ ] Gentle map blur for map-opened Preferences with return to the originating page
+- [ ] Non-scrolling phone homepage, attribution information icon and session-aware account access
+- [ ] Glass preference menus/sliders and Meridian text-selection colours; verify remembered preferences
 - [x] Collapsed Saved/Recent sections with arrow toggles — tested empty sections
 - [x] Replace homepage water with location-aware blurred moving street map — uses already-granted location, otherwise remembered/default view
 - [x] Live ETA link implementation with 6-hour expiry, 15-second updates and stop-sharing — ETA only, no coordinates
