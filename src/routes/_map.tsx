@@ -110,13 +110,13 @@ function Shell() {
                 <div className="surface h-full overflow-y-auto">{panelContent}</div>
               </div>
               {bp === "xl" && (
-                <button
+                <Button variant="ghost"
                   onClick={() => setCollapsed(!collapsed)}
                   aria-label={collapsed ? "Show panel" : "Hide panel"}
                   className="glass absolute -right-9 top-16 flex h-12 w-7 items-center justify-center rounded-r-xl"
                 >
                   {collapsed ? <ChevronRight strokeWidth={1.5} className="h-4 w-4" /> : <ChevronLeft strokeWidth={1.5} className="h-4 w-4" />}
-                </button>
+                </Button>
               )}
             </aside>
           )}

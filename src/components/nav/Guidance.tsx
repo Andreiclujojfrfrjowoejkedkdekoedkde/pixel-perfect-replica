@@ -35,7 +35,7 @@ export function Guidance({ route: initial, destination, stops, mode, onEnd }: { 
 
   useEffect(() => {
     if (!map) return;
-    const pause = () => setFollowing(false);
+    const pause = (e: { originalEvent?: Event }) => { if (e.originalEvent) setFollowing(false); };
     map.on("dragstart", pause); map.on("rotatestart", pause); map.on("zoomstart", onZoom);
     function onZoom(e: { originalEvent?: Event }) { if (e.originalEvent) pause(); }
     return () => { map.off("dragstart", pause); map.off("rotatestart", pause); map.off("zoomstart", onZoom); };
