@@ -110,7 +110,7 @@ export async function placeDetails(id: string): Promise<PlaceDetails> {
 
 export type Maneuver = { instruction: string; verbal?: string; type: number; street: string; length: number; time: number; beginIndex: number };
 export type Route = { coords: [number, number][]; distance: number; duration: number; maneuvers: Maneuver[]; offline?: boolean };
-export type RouteOptions = { mode: TravelMode; avoidTolls: boolean; avoidHighways: boolean; avoidFerries: boolean; avoidUnpaved: boolean; language?: string };
+export type RouteOptions = { mode: TravelMode; avoidTolls: boolean; avoidHighways: boolean; avoidFerries: boolean; avoidUnpaved: boolean; language?: string; vehicleType?: "car" | "ev" | "van" | "truck"; vehicleHeight?: number; vehicleWeight?: number; planning?: { type: "depart" | "arrive"; value: string } };
 
 export interface RoutingEngine {
   name: string;
@@ -120,14 +120,15 @@ export interface RoutingEngine {
 export const valhalla: RoutingEngine = {
   name: "Valhalla",
   async route(stops, opts) {
-    const costing = opts.mode === "drive" ? "auto" : opts.mode === "walk" ? "pedestrian" : "bicycle";
+    const costing = opts.mode === "drive" ? (["van", "truck"].includes(opts.vehicleType ?? "car") ? "truck" : "auto") : opts.mode === "walk" ? "pedestrian" : "bicycle";
     const co: Record<string, unknown> = {};
-    if (costing === "auto") {
-      co["auto"] = {
+    if (costing === "auto" || costing === "truck") {
+      co[costing] = {
         use_tolls: opts.avoidTolls ? 0 : 0.5,
         use_highways: opts.avoidHighways ? 0 : 1,
         use_ferry: opts.avoidFerries ? 0 : 0.5,
         exclude_unpaved: opts.avoidUnpaved,
+        ...(costing === "truck" ? { height: opts.vehicleHeight ?? 2, weight: opts.vehicleWeight ?? 3.5 } : {}),
       };
     }
     const body = {
@@ -137,6 +138,7 @@ export const valhalla: RoutingEngine = {
       units: "kilometers",
       language: opts.language ?? "en-US",
       alternates: stops.length === 2 ? 2 : 0,
+      ...(opts.planning ? { date_time: { type: opts.planning.type === "depart" ? 1 : 2, value: opts.planning.value } } : {}),
     };
     const r = await fetch(`https://valhalla1.openstreetmap.de/route?json=${encodeURIComponent(JSON.stringify(body))}`);
     const j = await r.json();
@@ -176,6 +178,10 @@ export async function mapillaryImageNear(lon: number, lat: number, token: string
 export const routingEngine: RoutingEngine = {
   name: "Meridian",
   async route(stops, opts) {
+    if (opts.mode === "drive" && ["van", "truck"].includes(opts.vehicleType ?? "car")) {
+      if (!navigator.onLine) throw new Error("Height/weight-aware routing needs a connection. Offline roads do not verify vehicle clearance.");
+      return valhalla.route(stops, opts);
+    }
     if (!navigator.onLine) return offlineRouter.route(stops, opts);
     try { return await valhalla.route(stops, opts); }
     catch (error) { try { return await offlineRouter.route(stops, opts); } catch { throw error; } }

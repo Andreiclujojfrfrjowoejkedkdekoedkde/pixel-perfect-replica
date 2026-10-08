@@ -10,15 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as MapRouteImport } from './routes/_map'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as MapIndexRouteImport } from './routes/_map/index'
 import { Route as MapDirectionsRouteImport } from './routes/_map/directions'
+import { Route as MapHistoryRouteImport } from './routes/_map/history'
 import { Route as MapMapRouteImport } from './routes/_map/map'
 import { Route as MapOfflineRouteImport } from './routes/_map/offline'
 import { Route as MapSettingsRouteImport } from './routes/_map/settings'
+import { Route as ShareTokenRouteImport } from './routes/share.$token'
 import { Route as MapPlaceIdRouteImport } from './routes/_map/place.$id'
+import { Route as ApiTrafficZXYRouteImport } from './routes/api/traffic.$z.$x.$y'
 
 const MapRoute = MapRouteImport.update({
   id: '/_map',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MapIndexRoute = MapIndexRouteImport.update({
@@ -29,6 +38,11 @@ const MapIndexRoute = MapIndexRouteImport.update({
 const MapDirectionsRoute = MapDirectionsRouteImport.update({
   id: '/directions',
   path: '/directions',
+  getParentRoute: () => MapRoute,
+} as any)
+const MapHistoryRoute = MapHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => MapRoute,
 } as any)
 const MapMapRoute = MapMapRouteImport.update({
@@ -46,57 +60,105 @@ const MapSettingsRoute = MapSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => MapRoute,
 } as any)
+const ShareTokenRoute = ShareTokenRouteImport.update({
+  id: '/share/$token',
+  path: '/share/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MapPlaceIdRoute = MapPlaceIdRouteImport.update({
   id: '/place/$id',
   path: '/place/$id',
   getParentRoute: () => MapRoute,
 } as any)
+const ApiTrafficZXYRoute = ApiTrafficZXYRouteImport.update({
+  id: '/api/traffic/$z/$x/$y',
+  path: '/api/traffic/$z/$x/$y',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof MapIndexRoute
+  '/auth': typeof AuthRoute
   '/directions': typeof MapDirectionsRoute
+  '/history': typeof MapHistoryRoute
   '/map': typeof MapMapRoute
   '/offline': typeof MapOfflineRoute
   '/settings': typeof MapSettingsRoute
+  '/share/$token': typeof ShareTokenRoute
   '/place/$id': typeof MapPlaceIdRoute
+  '/api/traffic/$z/$x/$y': typeof ApiTrafficZXYRoute
 }
 export interface FileRoutesByTo {
+  '/auth': typeof AuthRoute
   '/directions': typeof MapDirectionsRoute
+  '/history': typeof MapHistoryRoute
   '/map': typeof MapMapRoute
   '/offline': typeof MapOfflineRoute
   '/settings': typeof MapSettingsRoute
+  '/share/$token': typeof ShareTokenRoute
   '/': typeof MapIndexRoute
   '/place/$id': typeof MapPlaceIdRoute
+  '/api/traffic/$z/$x/$y': typeof ApiTrafficZXYRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_map': typeof MapRouteWithChildren
+  '/auth': typeof AuthRoute
   '/_map/directions': typeof MapDirectionsRoute
+  '/_map/history': typeof MapHistoryRoute
   '/_map/map': typeof MapMapRoute
   '/_map/offline': typeof MapOfflineRoute
   '/_map/settings': typeof MapSettingsRoute
+  '/share/$token': typeof ShareTokenRoute
   '/_map/': typeof MapIndexRoute
   '/_map/place/$id': typeof MapPlaceIdRoute
+  '/api/traffic/$z/$x/$y': typeof ApiTrafficZXYRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/directions' | '/map' | '/offline' | '/settings' | '/place/$id'
+    | '/'
+    | '/auth'
+    | '/directions'
+    | '/history'
+    | '/map'
+    | '/offline'
+    | '/settings'
+    | '/share/$token'
+    | '/place/$id'
+    | '/api/traffic/$z/$x/$y'
   fileRoutesByTo: FileRoutesByTo
-  to: '/directions' | '/map' | '/offline' | '/settings' | '/' | '/place/$id'
+  to:
+    | '/auth'
+    | '/directions'
+    | '/history'
+    | '/map'
+    | '/offline'
+    | '/settings'
+    | '/share/$token'
+    | '/'
+    | '/place/$id'
+    | '/api/traffic/$z/$x/$y'
   id:
     | '__root__'
     | '/_map'
+    | '/auth'
     | '/_map/directions'
+    | '/_map/history'
     | '/_map/map'
     | '/_map/offline'
     | '/_map/settings'
+    | '/share/$token'
     | '/_map/'
     | '/_map/place/$id'
+    | '/api/traffic/$z/$x/$y'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   MapRoute: typeof MapRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ShareTokenRoute: typeof ShareTokenRoute
+  ApiTrafficZXYRoute: typeof ApiTrafficZXYRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -106,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_map/': {
@@ -120,6 +189,13 @@ declare module '@tanstack/react-router' {
       path: '/directions'
       fullPath: '/directions'
       preLoaderRoute: typeof MapDirectionsRouteImport
+      parentRoute: typeof MapRoute
+    }
+    '/_map/history': {
+      id: '/_map/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof MapHistoryRouteImport
       parentRoute: typeof MapRoute
     }
     '/_map/map': {
@@ -143,6 +219,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MapSettingsRouteImport
       parentRoute: typeof MapRoute
     }
+    '/share/$token': {
+      id: '/share/$token'
+      path: '/share/$token'
+      fullPath: '/share/$token'
+      preLoaderRoute: typeof ShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_map/place/$id': {
       id: '/_map/place/$id'
       path: '/place/$id'
@@ -150,11 +233,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MapPlaceIdRouteImport
       parentRoute: typeof MapRoute
     }
+    '/api/traffic/$z/$x/$y': {
+      id: '/api/traffic/$z/$x/$y'
+      path: '/api/traffic/$z/$x/$y'
+      fullPath: '/api/traffic/$z/$x/$y'
+      preLoaderRoute: typeof ApiTrafficZXYRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface MapRouteChildren {
   MapDirectionsRoute: typeof MapDirectionsRoute
+  MapHistoryRoute: typeof MapHistoryRoute
   MapMapRoute: typeof MapMapRoute
   MapOfflineRoute: typeof MapOfflineRoute
   MapSettingsRoute: typeof MapSettingsRoute
@@ -164,6 +255,7 @@ interface MapRouteChildren {
 
 const MapRouteChildren: MapRouteChildren = {
   MapDirectionsRoute: MapDirectionsRoute,
+  MapHistoryRoute: MapHistoryRoute,
   MapMapRoute: MapMapRoute,
   MapOfflineRoute: MapOfflineRoute,
   MapSettingsRoute: MapSettingsRoute,
@@ -175,6 +267,9 @@ const MapRouteWithChildren = MapRoute._addFileChildren(MapRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   MapRoute: MapRouteWithChildren,
+  AuthRoute: AuthRoute,
+  ShareTokenRoute: ShareTokenRoute,
+  ApiTrafficZXYRoute: ApiTrafficZXYRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

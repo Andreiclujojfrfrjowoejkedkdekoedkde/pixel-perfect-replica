@@ -1,0 +1,15 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { fmtDuration, fmtDistance } from "@/lib/format";
+import { Clock, Navigation } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { Database } from "@/integrations/supabase/types";
+type Shared = Database["public"]["Functions"]["read_shared_eta"]["Returns"][number];
+export const Route = createFileRoute("/share/$token")({ head: () => ({ meta: [{ title: "Live arrival — Meridian" }, { name: "description", content: "A private live arrival estimate shared with you on Meridian." }, { property: "og:title", content: "Live arrival on Meridian" }, { property: "og:description", content: "Check a shared live ETA without exposing location history." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex, nofollow" }] }), component: SharedArrival });
+function SharedArrival() {
+  const { token } = Route.useParams(); const [data, setData] = useState<Shared | null>(null); const [status, setStatus] = useState("Loading arrival…"); const [now, setNow] = useState(0);
+  useEffect(() => { let live = true; const load = async () => { setNow(Date.now()); if (!/^[a-f0-9]{64}$/.test(token)) { setStatus("This link is unavailable."); return; } const result = await supabase.rpc("read_shared_eta", { share_token: token }); if (!live) return; if (result.error) { setStatus("Could not refresh. Reconnecting…"); return; } const row = result.data?.[0]; setData(row ?? null); setStatus(row ? "" : "Sharing has ended or this link has expired."); }; void load(); const timer = window.setInterval(load, 15000); return () => { live = false; clearInterval(timer); }; }, [token]);
+  const stale = data && now - Date.parse(data.updated_at) > 45000;
+  return <main className="flex h-dvh items-center justify-center bg-background px-5"><div className="w-full max-w-md"><Navigation strokeWidth={1.5} className="mb-6 h-9 w-9 text-primary" /><p className="text-sm text-muted-foreground">Meridian · shared trip</p><h1 className="mt-3 font-display text-3xl">Live arrival</h1>{data ? <><div className="mt-8 border-y py-6"><div className="font-display text-5xl text-primary">{data.eta ? new Date(data.eta).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Locating"}</div><div className="mt-4 flex gap-6 text-sm"><span>{fmtDuration(data.remaining_s)} remaining</span><span>{fmtDistance(data.remaining_m, "metric")}</span></div></div><p role="status" className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><Clock strokeWidth={1.5} className="h-4 w-4" />{stale ? "Updates paused · last estimate shown" : "Updated just now"}</p></> : null}{status && <p role="status" className="my-8 text-sm text-muted-foreground">{status}</p>}<Button asChild variant="ghost" className="mt-8"><Link to="/">Open Meridian</Link></Button></div></main>;
+}

@@ -6,7 +6,8 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { SearchBar } from "@/components/search/SearchBar";
 import { storage } from "@/lib/platform";
 import type { Place } from "@/lib/services";
-import water from "@/assets/home-water.jpg";
+import { useMapState } from "@/components/map/MapContext";
+import { location } from "@/lib/platform";
 
 type Shortcuts = { home?: Place; work?: Place };
 
@@ -14,6 +15,28 @@ export function HomeScreen() {
   const [shortcuts, setShortcuts] = useState<Shortcuts>({});
   const [editing, setEditing] = useState<"home" | "work" | null>(null);
   const navigate = useNavigate();
+  const { map, position, setPosition } = useMapState();
+  useEffect(() => {
+    let live = true;
+    void navigator.permissions?.query({ name: "geolocation" }).then(p => {
+      if (p.state === "granted") return location.once().then(value => { if (live) setPosition(value); });
+      return undefined;
+    }).catch(() => {});
+    return () => { live = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!map) return;
+    const center: [number, number] = position ? [position.lon, position.lat] : map.getCenter().toArray() as [number, number];
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    try { map.jumpTo({ center, zoom: 14.5, pitch: 0, bearing: 0 }); } catch { /* map unavailable */ }
+    const move = (direction: number) => {
+      if (document.hidden) return;
+      try { map.easeTo({ center: [center[0] + direction * 0.0025, center[1] + direction * 0.001], zoom: 14.5, pitch: 0, bearing: 0, duration: reduced.matches ? 0 : 18000, easing: t => t }); } catch { /* map removed */ }
+    };
+    let direction = 1; move(direction);
+    const timer = reduced.matches ? undefined : window.setInterval(() => { direction *= -1; move(direction); }, 19000);
+    return () => { clearInterval(timer); try { map.stop(); } catch { /* removed */ } };
+  }, [map, position?.lat, position?.lon]);
   useEffect(() => { setShortcuts(storage.get("shortcuts", {})); }, []);
   const save = (place: Place) => {
     if (!editing) return;
@@ -25,8 +48,8 @@ export function HomeScreen() {
     if (!p) { setEditing(key); return; }
     navigate({ to: "/directions", search: { to: `${p.lat},${p.lon}`, toName: p.name } });
   };
-  return <div className="homepage fixed inset-0 z-40 flex items-center justify-center overflow-y-auto bg-background">
-    <div className="homepage-water pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true"><img src={water} width={1536} height={1024} alt="" className="h-full w-full object-cover" /><div className="homepage-water-wash absolute inset-0" /></div>
+  return <div className="homepage fixed inset-0 z-40 flex items-center justify-center overflow-y-auto">
+    <div className="homepage-map-wash pointer-events-none absolute inset-0" aria-hidden="true" />
     <div className="homepage-content relative z-10 flex w-full max-w-4xl flex-col gap-8 px-5 py-10 sm:gap-10 sm:px-8 sm:py-12">
       <header className="flex items-start justify-between gap-4">
         <div><h1 className="font-display text-5xl leading-tight">Meridian</h1><p className="mt-2 text-[10px] font-semibold uppercase text-muted-foreground">A living atlas of the world</p></div>

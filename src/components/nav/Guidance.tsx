@@ -6,6 +6,10 @@ import { routingEngine, type Route } from "@/lib/services";
 import { location, tts, keepAwake } from "@/lib/platform";
 import { fmtDistance, fmtDuration, fmtClock, haversine, nearestOnLine } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { EtaShare } from "./EtaShare";
+import { saveTrip } from "@/lib/trips";
+import { useServerFn } from "@tanstack/react-start";
+import { stopEtaShare } from "@/lib/travel.functions";
 
 function ManeuverIcon({ type }: { type: number }) {
   const Icon = [4,5,6].includes(type) ? Flag : [10,11].includes(type) ? CornerUpRight : [14,15].includes(type) ? CornerUpLeft : [9,18,20,23].includes(type) ? ArrowUpRight : [16,19,21,24].includes(type) ? ArrowUpLeft : [12,13].includes(type) ? RotateCcw : ArrowUp;
@@ -19,6 +23,14 @@ export function Guidance({ route: initial, destination, stops, mode, onEnd }: { 
   const [error, setError] = useState<string | null>(null);
   const [following, setFollowing] = useState(true);
   const [now, setNow] = useState(Date.now());
+  const [recalculating, setRecalculating] = useState(false);
+  const [shareId, setShareId] = useState<string | null>(null);
+  const [ending, setEnding] = useState(false);
+  const started = useRef(Date.now());
+  const tripId = useRef<string | null>(null);
+  const traveled = useRef(0);
+  const lastAlong = useRef(0);
+  const stopShare = useServerFn(stopEtaShare);
   const spoken = useRef("");
   const rerouting = useRef(false);
   const lastReroute = useRef(0);
@@ -26,6 +38,7 @@ export function Guidance({ route: initial, destination, stops, mode, onEnd }: { 
 
   useEffect(() => {
     const stop = location.watch(p => { setPosition(p); setError(null); }, setError);
+    tripId.current = crypto.randomUUID();
     if (settings.keepScreenOn) void keepAwake.on();
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     const origin = position ? [position.lon,position.lat] as [number,number] : route.coords[0];
@@ -54,6 +67,12 @@ export function Guidance({ route: initial, destination, stops, mode, onEnd }: { 
     const remaining = Math.max(0,snap.total-snap.along);
     return { ...snap, off: snap.distance, next, toNext, remaining, me, timeLeft: snap.total ? remaining/snap.total*route.duration : 0, percent: snap.total ? Math.max(0,Math.min(100,snap.along/snap.total*100)) : 0 };
   }, [position,route]);
+  useEffect(() => {
+    if (!progress || progress.off > Math.max(50, position?.accuracy ?? 0)) return;
+    const delta = progress.along - lastAlong.current;
+    if (delta > 0 && delta < 2000) traveled.current += delta;
+    lastAlong.current = progress.along;
+  }, [progress, position?.accuracy]);
 
   const stale = !position || now-position.timestamp > 15000;
   useEffect(() => {
@@ -79,12 +98,12 @@ export function Guidance({ route: initial, destination, stops, mode, onEnd }: { 
     if (!progress || stale || progress.off < Math.max(50,position?.accuracy ?? 0) || rerouting.current || Date.now()-lastReroute.current<20000) return;
     const nextStop=stops[stopIndex.current];
     if (nextStop && haversine(progress.me,nextStop)<45 && stopIndex.current<stops.length-1) stopIndex.current++;
-    rerouting.current=true; lastReroute.current=Date.now();
+    rerouting.current=true; setRecalculating(true); lastReroute.current=Date.now();
     const remainingStops=stops.slice(stopIndex.current);
     routingEngine.route([progress.me,...(remainingStops.length ? remainingStops : [destination])],{ mode,...settings })
-      .then(r => { if (r[0]) { setRoute(r[0]); setRoutes([r[0]]); spoken.current=""; setError(null); } })
+      .then(r => { if (r[0]) { lastAlong.current=0; setRoute(r[0]); setRoutes([r[0]]); spoken.current=""; setError(null); } else setError("No new route found. Retry when connected."); })
       .catch(() => setError("Unable to reroute. Continue on the saved route or reconnect."))
-      .finally(() => { rerouting.current=false; });
+      .finally(() => { rerouting.current=false; setRecalculating(false); });
   }, [progress,stale]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -94,17 +113,26 @@ export function Guidance({ route: initial, destination, stops, mode, onEnd }: { 
 
   const arrived=Boolean(progress && !stale && progress.remaining<25 && haversine(progress.me,destination)<45);
   const eta=progress && !stale ? new Date(now+progress.timeLeft*1000) : null;
+  const keep = !route.offline && progress && progress.toNext < 700 ? /\b(?:keep|stay|bear)\s+(?:to\s+the\s+)?(left|right)\b/i.exec(progress.next.instruction)?.[1]?.toLowerCase() ?? null : null;
+  const endTrip = async () => {
+    setEnding(true);
+    if (shareId) { try { await stopShare({ data: { id: shareId } }); } catch { setError("Could not stop sharing. Retry while connected, or stop it in Account. Link expires within 6 hours."); setEnding(false); return; } }
+    if (settings.tripHistory && tripId.current) saveTrip({ id: tripId.current, started_at: new Date(started.current).toISOString(), ended_at: new Date().toISOString(), distance_m: traveled.current, duration_s: (Date.now()-started.current)/1000, completed: arrived });
+    onEnd();
+  };
   return <>
     <div className="guidance-top absolute inset-x-3 z-40 md:left-4 md:right-auto md:w-[420px]" aria-live="polite">
       <div className="glass flex items-center gap-4 rounded-2xl p-4">
         <ManeuverIcon type={arrived ? 4 : progress?.next.type ?? 8} />
         <div className="min-w-0 flex-1">
-          <div className="tnum text-3xl font-semibold leading-none">{arrived ? "Arrived" : stale ? "Locating" : progress ? fmtDistance(progress.toNext,settings.units) : "Locating"}</div>
+          <div className="tnum text-3xl font-semibold leading-none">{recalculating ? "Recalculating…" : arrived ? "Arrived" : stale ? "Locating" : progress ? fmtDistance(progress.toNext,settings.units) : "Locating"}</div>
           <div className="mt-2 font-display text-lg leading-snug">{arrived ? "You have reached your destination" : progress?.next.street || progress?.next.instruction || "Waiting for GPS"}</div>
           <div className="mt-1 text-xs text-muted-foreground">{route.offline ? "Offline · estimated time" : mode === "drive" ? "Driving" : mode === "cycle" ? "Cycling" : "Walking"}{position && !stale && position.accuracy>50 ? " · GPS accuracy low" : ""}</div>
         </div>
         <Button variant="ghost" size="icon" aria-label={settings.voice ? "Mute voice" : "Enable voice"} title={settings.voice ? "Mute voice" : "Enable voice"} onClick={() => { update({ voice: !settings.voice }); if(settings.voice) tts.speak(""); }}>{settings.voice ? <Volume2 /> : <VolumeX />}</Button>
       </div>
+      {keep && !stale && !recalculating && <div className="glass mt-2 flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold">{keep === "left" ? <ArrowUpLeft strokeWidth={1.5} /> : <ArrowUpRight strokeWidth={1.5} />} Keep {keep}<span className="ml-auto text-xs font-normal text-muted-foreground">Upcoming junction</span></div>}
+      {recalculating && <div role="status" className="glass mt-2 rounded-lg px-4 py-2 text-sm text-primary">You’re off route · finding a new route</div>}
       {(error || (position && stale)) && <div className="glass mt-2 rounded-lg px-3 py-2 text-sm">{error ?? "GPS signal lost. Waiting for your location."}</div>}
     </div>
     {!following && <div className="absolute bottom-40 right-4 z-40 md:bottom-32"><Button className="glass h-11 text-foreground" variant="outline" onClick={() => setFollowing(true)}><Crosshair strokeWidth={1.5} /> Recenter</Button></div>}
@@ -116,7 +144,7 @@ export function Guidance({ route: initial, destination, stops, mode, onEnd }: { 
           <div><div className="tnum text-lg font-semibold">{fmtDuration(progress?.timeLeft ?? route.duration)}</div><div className="text-xs text-muted-foreground">Remaining</div></div>
           <div><div className="tnum text-lg font-semibold">{fmtDistance(progress?.remaining ?? route.distance,settings.units)}</div><div className="text-xs text-muted-foreground">Distance</div></div>
         </div>
-        <div className="flex items-center gap-3 px-4 pb-3"><progress aria-label="Trip progress" max="100" value={progress?.percent ?? 0} className="trip-progress h-1.5 min-w-0 flex-1" /><Button variant="destructive" size="sm" onClick={onEnd}><X /> End</Button></div>
+        <div className="flex items-center gap-3 px-4 pb-3"><progress aria-label="Trip progress" max="100" value={progress?.percent ?? 0} className="trip-progress h-1.5 min-w-0 flex-1" /><EtaShare eta={eta} seconds={progress?.timeLeft ?? route.duration} meters={progress?.remaining ?? route.distance} onActiveChange={setShareId} /><Button variant="destructive" size="sm" disabled={ending} onClick={endTrip}><X /> {ending ? "Ending…" : "End"}</Button></div>
       </div>
     </div>
   </>;

@@ -20,7 +20,12 @@
 - Map point selection is owned by MapContext; directions stays mounted during selection and trips, with guidance portalled to the map overlay. Why: hiding planning must not reset navigation state or clip driving controls.
 - Navigation progress snaps to road segments and camera following pauses after manual gestures. Why: sparse vertices must not cause false reroutes or fight user map movement.
 
-- Water animation belongs only on the standalone homepage, never the map menu. Why: keep transparent map controls visually clean.
+- The homepage reuses MapCanvas with a blurred moving street view, respects reduced motion, and requests no new location permission; its drift never writes location history. Why: preserve a single canvas and voluntary location disclosure.
 - The root index shows HomeScreen and /map shows the existing map menu inside the shared map layout; home/work shortcuts persist locally and pass coordinates into directions. Why: separate the home launch screen without duplicating the map canvas or navigation state.
 - Offline area selection uses a MapLibre polygon and draggable DOM corner markers owned by the offline page. Why: keep bounds visible and editable without creating another map canvas.
 - Category searches refresh after map movement using bounded viewport Overpass queries and a small TTL cache; MapLibre clusters expand on click. Why: offer worldwide source coverage without loading a global dataset onto devices.
+- Trip summaries contain duration and distance only, expire after a bounded retention window, and sync only with recorded account consent. Why: never persist GPS traces or leak a route history.
+- ETA share tokens expose only time/distance through a narrow RPC, never owner IDs or coordinates; authenticated writes and hard expiry control access. Why: share arrival without sharing whereabouts.
+- Report posting and voting use authenticated server functions and database validation triggers; public bounds RPCs project only report content, while daily cleanup removes expired travel records. Why: enforce privacy, limits, and moderation beyond client controls.
+- Commercial-vehicle routing never falls back to the incomplete offline engine; EV stops are real POIs and explicitly unverified suggestions. Why: avoid implying clearance or charging guarantees.
+- Traffic tiles proxy a server-only provider credential; flow colors do not alter the Valhalla ETA. Why: a visual traffic overlay is not traffic-aware routing.

@@ -10,6 +10,7 @@ import { routingEngine, photonSearch, type Place } from "@/lib/services";
 import { fmtDistance, fmtDuration, parseCoords } from "@/lib/format";
 import { location } from "@/lib/platform";
 import { Button } from "@/components/ui/button";
+import { ChargerStops } from "@/components/nav/ChargerStops";
 
 const search = z.object({
   to: z.string().optional(),
@@ -106,6 +107,8 @@ function Directions() {
   const [mode, setMode] = useState<TravelMode>(sp.mode ?? settings.travelMode);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [planType, setPlanType] = useState<"now" | "depart" | "arrive">("now");
+  const [planTime, setPlanTime] = useState("");
   useEffect(() => {
     if (stops[0]?.coord) return;
     let live = true;
@@ -127,14 +130,16 @@ function Directions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [position]);
 
-  const key = useMemo(() => JSON.stringify([stops.map((s) => s.coord), mode, settings.avoidTolls, settings.avoidHighways, settings.avoidFerries, settings.avoidUnpaved]), [stops, mode, settings]);
+  const key = useMemo(() => JSON.stringify([stops.map((s) => s.coord), mode, settings.avoidTolls, settings.avoidHighways, settings.avoidFerries, settings.avoidUnpaved, settings.vehicleType, settings.vehicleHeight, settings.vehicleWeight, planType, planTime]), [stops, mode, settings, planType, planTime]);
 
   useEffect(() => {
     const coords = stops.map((s) => s.coord).filter(Boolean) as [number, number][];
+    if (navigating) return;
     if (coords.length < 2 || coords.length !== stops.length) { setRoutes([]); return; }
     let live = true;
     setLoading(true); setError(null);
-    routingEngine.route(coords, { mode, ...settings })
+    if (planType !== "now" && (!planTime || Date.parse(planTime) < Date.now())) { setError("Choose a future departure or arrival time."); setLoading(false); setRoutes([]); return; }
+    routingEngine.route(coords, { mode, ...settings, ...(planType !== "now" ? { planning: { type: planType, value: planTime } } : {}) })
       .then((r) => {
         if (!live) return;
         setRoutes(r, 0);
@@ -207,6 +212,7 @@ function Directions() {
         </fieldset>
       )}
       <div className="hairline mx-5 mt-4" />
+      <section className="px-5 pt-4"><label className="block text-xs text-muted-foreground">Departure planning<select aria-label="Departure planning" value={planType} onChange={e => setPlanType(e.target.value as "now" | "depart" | "arrive")} className="mt-1 h-10 w-full rounded-lg border bg-background px-3 text-sm"><option value="now">Leave now</option><option value="depart">Depart at</option><option value="arrive">Arrive by</option></select></label>{planType !== "now" && <input aria-label={planType === "depart" ? "Departure time" : "Arrival time"} type="datetime-local" value={planTime} onChange={e => setPlanTime(e.target.value)} className="mt-2 h-10 w-full min-w-0 rounded-lg border bg-background px-3 text-sm" />}</section>
       {loading && <p className="px-5 pt-3 text-sm text-muted-foreground">Finding routes</p>}
       {error && <p className="px-5 pt-3 text-sm text-destructive">{error}</p>}
       <ul className="pt-2">
@@ -225,6 +231,8 @@ function Directions() {
       {selected && (
         <div className="px-5 pt-3">
           {selected.offline && <p className="mb-3 text-xs text-muted-foreground">Offline roads · estimated time · road-name guidance only; restrictions may be incomplete.</p>}
+          {planType !== "now" && planTime && <p className="mb-3 text-sm text-primary">{planType === "arrive" ? `Leave at ${new Date(Date.parse(planTime)-selected.duration*1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} to arrive by ${new Date(planTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : `Estimated arrival ${new Date(Date.parse(planTime)+selected.duration*1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}<span className="mt-1 block text-xs text-muted-foreground">Estimated · traffic and charging delays not guaranteed.</span></p>}
+          {mode === "drive" && settings.vehicleType === "ev" && <ChargerStops route={selected} add={p => { if (stops.length >= 6) { setError("Maximum 6 stops. Remove a stop before adding a charger."); return; } setStops(s => [...s.slice(0,-1), { label:p.name, coord:[p.lon,p.lat] }, s[s.length-1] ?? { label:"",coord:null }]); }} />}
           <Button onClick={() => { const c = position ? [position.lon,position.lat] as [number,number] : stops[0]?.coord; if (c) map?.easeTo({ center: c, zoom: 17, pitch: 55, duration: 800 }); setNavigating(true); }} className="h-12 w-full rounded-xl">
             <Play strokeWidth={1.5} className="h-4 w-4" /> Start trip
           </Button>

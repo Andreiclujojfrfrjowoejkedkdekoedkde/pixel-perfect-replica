@@ -14,13 +14,187 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      eta_shares: {
+        Row: {
+          eta: string | null
+          expires_at: string
+          id: string
+          remaining_m: number
+          remaining_s: number
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          eta?: string | null
+          expires_at?: string
+          id?: string
+          remaining_m?: number
+          remaining_s?: number
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          eta?: string | null
+          expires_at?: string
+          id?: string
+          remaining_m?: number
+          remaining_s?: number
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      report_votes: {
+        Row: {
+          kind: string
+          report_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          kind: string
+          report_id: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          kind?: string
+          report_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_votes_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "road_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      road_reports: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          expires_at: string
+          hidden: boolean
+          id: string
+          lat: number
+          lon: number
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string
+          expires_at?: string
+          hidden?: boolean
+          id?: string
+          lat: number
+          lon: number
+          user_id?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          expires_at?: string
+          hidden?: boolean
+          id?: string
+          lat?: number
+          lon?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      travel_preferences: {
+        Row: {
+          consent_at: string
+          history_opt_in: boolean
+          sync_opt_in: boolean
+          user_id: string
+        }
+        Insert: {
+          consent_at?: string
+          history_opt_in?: boolean
+          sync_opt_in?: boolean
+          user_id?: string
+        }
+        Update: {
+          consent_at?: string
+          history_opt_in?: boolean
+          sync_opt_in?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      trip_summaries: {
+        Row: {
+          completed: boolean
+          distance_m: number
+          duration_s: number
+          ended_at: string
+          expires_at: string
+          id: string
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          distance_m?: number
+          duration_s?: number
+          ended_at: string
+          expires_at?: string
+          id: string
+          started_at: string
+          user_id?: string
+        }
+        Update: {
+          completed?: boolean
+          distance_m?: number
+          duration_s?: number
+          ended_at?: string
+          expires_at?: string
+          id?: string
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      delete_own_travel_data: { Args: never; Returns: undefined }
+      nearby_road_reports: {
+        Args: { east: number; north: number; south: number; west: number }
+        Returns: {
+          category: string
+          confirmations: number
+          created_at: string
+          description: string
+          expires_at: string
+          id: string
+          lat: number
+          lon: number
+        }[]
+      }
+      read_shared_eta: {
+        Args: { share_token: string }
+        Returns: {
+          eta: string
+          expires_at: string
+          remaining_m: number
+          remaining_s: number
+          updated_at: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

@@ -1,0 +1,8 @@
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+SELECT cron.schedule('meridian-travel-retention', '0 3 * * *', $$DELETE FROM public.eta_shares WHERE expires_at < now(); DELETE FROM public.trip_summaries WHERE expires_at < now(); DELETE FROM public.road_reports WHERE expires_at < now();$$);
+CREATE OR REPLACE FUNCTION public.enforce_travel_consent() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$ BEGIN IF NEW.sync_opt_in AND NOT NEW.history_opt_in THEN RAISE EXCEPTION 'History consent required'; END IF; IF NOT NEW.sync_opt_in THEN DELETE FROM public.trip_summaries WHERE user_id = NEW.user_id; END IF; RETURN NEW; END; $$;
+CREATE TRIGGER enforce_history_consent BEFORE INSERT OR UPDATE ON public.travel_preferences FOR EACH ROW EXECUTE FUNCTION public.enforce_travel_consent();
+REVOKE DELETE ON public.report_votes FROM authenticated;
+CREATE OR REPLACE FUNCTION public.delete_own_travel_data() RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$ BEGIN IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Sign in required'; END IF; DELETE FROM public.eta_shares WHERE user_id = auth.uid(); DELETE FROM public.trip_summaries WHERE user_id = auth.uid(); DELETE FROM public.report_votes WHERE user_id = auth.uid(); DELETE FROM public.road_reports WHERE user_id = auth.uid(); DELETE FROM public.travel_preferences WHERE user_id = auth.uid(); END; $$;
+REVOKE ALL ON FUNCTION public.delete_own_travel_data() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.delete_own_travel_data() TO authenticated;
