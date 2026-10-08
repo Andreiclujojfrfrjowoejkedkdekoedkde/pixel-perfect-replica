@@ -224,7 +224,7 @@
 .homepage-action:hover { transform: translateY(-3px); }
 .homepage-search { box-shadow: inset 0 1px 0 var(--glass-rim), 0 12px 30px -12px var(--glass-shade); }
 @keyframes homepage-flow { from { transform: scale(1.12) translate(-1%, -1%) rotate(-1deg); } to { transform: scale(1.16) translate(1%, 1%) rotate(1deg); } }
-@media (max-width: 639px) { .homepage-action { height: 140px; padding: 18px; } .homepage-action > svg { margin-bottom: 14px; } }
+@media (max-width: 639px) { .homepage { align-items: flex-start; } .homepage-action { height: 140px; padding: 18px; } .homepage-action > svg { margin-bottom: 14px; } }
 @media (max-height: 700px) { .homepage { align-items: flex-start; } }
 @media (prefers-reduced-motion: reduce) { .homepage-water img { animation: none; } .homepage-action:hover { transform: none; } }
 @keyframes water-drift { from { transform: translateY(-15px) rotate(-4deg); } to { transform: translateY(25px) rotate(4deg); } }
