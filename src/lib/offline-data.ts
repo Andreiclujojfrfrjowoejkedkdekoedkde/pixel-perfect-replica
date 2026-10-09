@@ -40,7 +40,31 @@ export const deleteRegion = (id: string) => write(id);
 export function inside(p: [number, number], bbox: Bbox) { return p[0] >= bbox[0] && p[0] <= bbox[2] && p[1] >= bbox[1] && p[1] <= bbox[3]; }
 export function regionArea(b: Bbox) { return haversine([b[0], b[1]], [b[2], b[1]]) * haversine([b[0], b[1]], [b[0], b[3]]) / 1e6; }
 
-export async function overpass(query: string, signal?: AbortSignal): Promise<{ elements: Element[] }> {
+export async function overpass(query: string, signal?: AbortSignal, fast = false): Promise<{ elements: Element[] }> {
+  if (fast) {
+    const winner = new AbortController();
+    const combined = AbortSignal.any([winner.signal, AbortSignal.timeout(10000), ...(signal ? [signal] : [])]);
+    const hosts = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+    try {
+      return await Promise.any(hosts.map(async (host, index) => {
+        if (index) await new Promise<void>((resolve, reject) => {
+          if (combined.aborted) { reject(combined.reason); return; }
+          const cancel = () => { clearTimeout(timer); reject(combined.reason); };
+          const timer = setTimeout(() => { combined.removeEventListener("abort", cancel); resolve(); }, index * 1200);
+          combined.addEventListener("abort", cancel, { once: true });
+        });
+        combined.throwIfAborted();
+        const response = await fetch(host, { method: "POST", body: new URLSearchParams({ data: query }), signal: combined });
+        if (!response.ok) throw new Error("Provider busy");
+        const data = await response.json();
+        if (data.remark || !Array.isArray(data.elements)) throw new Error("Incomplete response");
+        return data as { elements: Element[] };
+      }));
+    } catch {
+      if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
+      throw new Error("Places service is busy. Please retry.");
+    } finally { winner.abort(); }
+  }
   for (const host of ["https://overpass.kumi.systems/api/interpreter", "https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"]) {
     if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
     const timeout = AbortSignal.timeout(22000);

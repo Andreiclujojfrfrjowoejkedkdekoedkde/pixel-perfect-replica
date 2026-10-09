@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { createElement, useEffect, useState } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { useServerFn } from "@tanstack/react-start";
 import { Link, useMatchRoute } from "@tanstack/react-router";
 import type { Marker } from "maplibre-gl";
@@ -40,7 +41,12 @@ export function RoadReports() {
     void import("maplibre-gl").then(ml => {
       if (disposed) return;
       reports.filter(r => Date.parse(r.expires_at) > Date.now()).forEach(r => {
-        const el = document.createElement("button"); el.className = "report-marker"; el.textContent = "!"; el.setAttribute("aria-label", `${r.category.replaceAll("_", " ")} report`); el.title = r.category.replaceAll("_", " "); el.onclick = e => { e.stopPropagation(); setSelected(r); setMessage(""); };
+        const category = categories.find(([id]) => id === r.category);
+        const Icon = category?.[2] ?? AlertTriangle;
+        const label = category?.[1] ?? "Other hazard";
+        const el = document.createElement("button"); el.type = "button"; el.className = "report-marker";
+        el.innerHTML = renderToStaticMarkup(createElement(Icon, { size: 19, strokeWidth: 1.5, "aria-hidden": true }));
+        el.setAttribute("aria-label", `${label} report`); el.title = label; el.onclick = e => { e.stopPropagation(); setSelected(r); setMessage(""); };
         markers.push(new ml.Marker({ element: el }).setLngLat([r.lon,r.lat]).addTo(map));
       });
     });

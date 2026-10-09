@@ -24,7 +24,6 @@ export function HomePanel() {
   const [retry, setRetry] = useState(0);
 
   const request = useRef<AbortController | null>(null);
-  const cache = useRef(new Map<string, { time: number; places: Place[] }>());
   const runCategory = (id: string) => {
     request.current?.abort();
     if (active === id) { setActive(null); setResults([]); setMarkers([]); setStatus(null); return; }
@@ -47,7 +46,6 @@ export function HomePanel() {
         setStatus("Zoom in to see places in this area."); return;
       }
       const bounds: [number, number, number, number] = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
-      const key = `${active}:${bounds.map(n => n.toFixed(4)).join(":")}`;
       const controller = new AbortController(); request.current = controller;
       const tilePlaces = visibleMapPlaces(map, active);
       const publish = (places: Place[]) => {
@@ -60,17 +58,17 @@ export function HomePanel() {
       publish(tilePlaces);
       setStatus(tilePlaces.length ? "Map places · checking for more" : "Looking around this area");
       try {
-        const cached = cache.current.get(key);
-        const found = cached && Date.now() - cached.time < 300000 ? cached.places : await nearbyCategory(category.id, category.tag, bounds, controller.signal);
+        const merge = (places: Place[]) => [...places, ...tilePlaces.filter(tile => !places.some(p => haversine([p.lon, p.lat], [tile.lon, tile.lat]) < 35 && p.name.toLowerCase() === tile.name.toLowerCase()))];
+        const found = await nearbyCategory(category.id, category.tag, bounds, controller.signal, local => { if (!disposed && !controller.signal.aborted) publish(merge(local)); });
         if (disposed || controller.signal.aborted) return;
-        if (cache.current.size >= 20) { const oldest = cache.current.keys().next().value; if (oldest) cache.current.delete(oldest); }
-        cache.current.set(key, { time: Date.now(), places: found });
-        publish(found.length ? found : tilePlaces); setStatus(found.length || tilePlaces.length ? null : "Nothing found in view.");
+        publish(merge(found)); setStatus(found.length || tilePlaces.length ? null : "Nothing found in view.");
       } catch (error) { if (!disposed && !controller.signal.aborted) { publish(tilePlaces); setStatus(tilePlaces.length ? "Showing map places · full search is busy. Please retry." : (error as Error).message); } }
     };
     const schedule = () => {
-      request.current?.abort(); setMarkers([]); setResults([]);
-      clearTimeout(timer); timer = setTimeout(() => { void load(); }, 750);
+      request.current?.abort();
+      const visible = map.getBounds();
+      setResults(previous => previous.filter(p => visible.contains([p.lon, p.lat]))); setMarkers(previous => previous.filter(p => visible.contains([p.lon, p.lat])));
+      clearTimeout(timer); timer = setTimeout(() => { void load(); }, 350);
     };
     const onIdle = () => { if (request.current?.signal.aborted || !request.current) return; const places = visibleMapPlaces(map, active); if (places.length) { setResults(previous => previous.length ? previous : places); setMarkers(previous => previous.length ? previous : places); } };
     void load(); map.on("moveend", schedule); map.on("idle", onIdle);

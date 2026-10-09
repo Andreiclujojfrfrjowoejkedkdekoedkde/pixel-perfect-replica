@@ -31,6 +31,7 @@ export type Settings = {
   vehicleHeight: number;
   vehicleWeight: number;
   liveTraffic: boolean;
+  trafficThickness: number;
 };
 
 export const defaultSettings: Settings = {
@@ -60,6 +61,7 @@ export const defaultSettings: Settings = {
   vehicleHeight: 2,
   vehicleWeight: 3.5,
   liveTraffic: false,
+  trafficThickness: 1,
 };
 
 type Ctx = { settings: Settings; update: (p: Partial<Settings>) => void; dark: boolean };

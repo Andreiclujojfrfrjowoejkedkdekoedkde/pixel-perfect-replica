@@ -100,6 +100,9 @@ function SettingsPage() {
       </Section>
       <Section title="Services">
         <Row label="Live traffic overlay">{toggle("liveTraffic")}</Row>
+        <Row label="Traffic line size">
+          <div className="flex items-center gap-3"><Slider min={0.5} max={2} step={0.1} value={[s.trafficThickness]} onValueChange={value => { if (value[0] !== undefined) update({ trafficThickness: value[0] }); }} className="w-24" aria-label="Traffic line size" /><output className="tnum w-9 text-right text-xs text-muted-foreground">{s.trafficThickness.toFixed(1)}×</output></div>
+        </Row>
         <p className="py-3 text-xs text-muted-foreground">Live traffic uses TomTom coverage and an account key. Route times remain estimates unless the routing provider supplies traffic.</p>
         <p className="py-3 text-sm text-muted-foreground">
           {env.mapillary ? "Street imagery is connected." : "Street imagery is off. Add a Mapillary token to turn it on."}
