@@ -33,3 +33,4 @@
 - Map-origin Preferences blur is tied to panel visibility, not just its route. Why: hiding the panel must restore a clear interactive map.
 - MapCanvas and TrafficLayer share overlay ordering after updates and refreshes; navigation stays above traffic and settlement labels stay above route lines. Why: preserve both navigation clarity and readable city names.
 - Report markers reuse the report menu's Lucide category icons, rendered from fixed application definitions only. Why: keep alert identity consistent without injecting report content into markup.
+- Traffic thickness is a persisted UI multiplier translated to the provider's validated integer tile parameter, with debounced tile reloads. Why: resize actual congestion lines without distorting roads or sending a request for each slider event.
