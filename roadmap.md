@@ -1,7 +1,7 @@
 # Meridian roadmap
 
 ## Current improvements
-- [ ] Optimize full nearby searches, add traffic thickness slider, and use category-specific report map icons
+- [ ] Optimize full nearby searches, add traffic thickness slider, use category-specific report map icons, and keep city names above routes/traffic
 - [x] Match scrollbars to Meridian, verify Romania/Australia categories, improve route/traffic clarity and layer order, and verify rerouting/junction guidance — six categories visible in Cluj/Melbourne from real loaded map POIs; Overpass enrichment can be rate-limited; route/arrows/location above traffic in planning and driving; off-route recalculation and controlled keep-left banner checked
 - [x] Remove homepage traffic; keep map traffic opt-in, add linked Andrei Hedes information credit, and clear map blur when Preferences is hidden — browser verified default off, enabled map traffic, no homepage traffic even when enabled, panel hide/reopen, Close and Escape
 - [x] Tighter non-scrolling mobile layout — six portrait/landscape phone sizes fit without scrolling

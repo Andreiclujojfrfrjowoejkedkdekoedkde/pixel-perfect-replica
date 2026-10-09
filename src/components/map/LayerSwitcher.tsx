@@ -4,6 +4,8 @@ import standard from "@/assets/mode-standard.jpg";
 import threeD from "@/assets/mode-3d.jpg";
 import earth from "@/assets/mode-earth.jpg";
 import street from "@/assets/mode-street.jpg";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
 
 const MODES: { id: MapMode; label: string; img: string; note: string }[] = [
   { id: "standard", label: "Standard", img: standard, note: "Atlas" },
@@ -38,6 +40,9 @@ export function LayerSwitcher({ onClose }: { onClose: () => void }) {
           </button>
         ))}
       </div>
+      <div className="hairline my-3" />
+      <div className="flex items-center justify-between text-sm"><span>Live traffic</span><Switch aria-label="Live traffic" checked={settings.liveTraffic} onCheckedChange={checked => update({ liveTraffic: checked })} /></div>
+      {settings.liveTraffic && <div className="mt-3 space-y-2"><div className="flex justify-between text-xs text-muted-foreground"><span>Traffic line size</span><output className="tnum">{settings.trafficThickness.toFixed(1)}×</output></div><Slider aria-label="Traffic line size" min={0.5} max={2} step={0.1} value={[settings.trafficThickness]} onValueChange={value => { if (value[0] !== undefined) update({ trafficThickness: value[0] }); }} /></div>}
       {mode === "earth" && (
         <label className="mt-3 flex items-center justify-between text-sm">
           Place labels

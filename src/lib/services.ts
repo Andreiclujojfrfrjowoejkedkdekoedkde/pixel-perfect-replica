@@ -52,8 +52,8 @@ export const CATEGORIES = [
 
 export async function categorySearch(tag: string, bbox: [number, number, number, number], signal?: AbortSignal): Promise<Place[]> {
   const [w, s, e, n] = bbox;
-  const q = `[out:json][timeout:20];nwr${tag}(${s},${w},${n},${e});out center tags 2000;`;
-  const j = await overpass(q, signal);
+  const q = `[out:json][timeout:8];nwr${tag}(${s},${w},${n},${e});out center tags 2000;`;
+  const j = await overpass(q, signal, true);
   return (j.elements ?? []).map((el: any) => {
     const t = el.tags ?? {};
     const lat = el.lat ?? el.center?.lat;
@@ -187,10 +187,23 @@ export const routingEngine: RoutingEngine = {
     catch (error) { try { return await offlineRouter.route(stops, opts); } catch { throw error; } }
   },
 };
-export async function nearbyCategory(id: string, tag: string, bbox: [number, number, number, number], signal?: AbortSignal) {
+const categoryCache: { id: string; bbox: [number, number, number, number]; places: Place[]; time: number }[] = [];
+export async function nearbyCategory(id: string, tag: string, bbox: [number, number, number, number], signal?: AbortSignal, onLocal?: (places: Place[]) => void) {
+  const inView = (p: Place) => p.lon >= bbox[0] && p.lat >= bbox[1] && p.lon <= bbox[2] && p.lat <= bbox[3];
+  const cached = categoryCache.find(c => c.id === id && Date.now() - c.time < 300000 && c.bbox[0] <= bbox[0] && c.bbox[1] <= bbox[1] && c.bbox[2] >= bbox[2] && c.bbox[3] >= bbox[3]);
+  if (cached) return cached.places.filter(inView);
   const center: [number, number] = [(bbox[0]+bbox[2])/2, (bbox[1]+bbox[3])/2];
-  const local = await localCategory(id, center).catch(() => null);
+  const local = (await localCategory(id, center).catch(() => null))?.filter(inView);
+  signal?.throwIfAborted();
+  if (local?.length) onLocal?.(local);
   if (local && !navigator.onLine) return local;
-  try { return await categorySearch(tag,bbox,signal); }
-  catch (e) { if (local?.length) return local; throw e; }
+  try {
+    const found = await categorySearch(tag,bbox,signal);
+    signal?.throwIfAborted();
+    const places = [...new Map([...(local ?? []), ...found].map(p => [p.id, p])).values()];
+    categoryCache.push({ id, bbox: [...bbox], places, time: Date.now() });
+    if (categoryCache.length > 20) categoryCache.shift();
+    return places;
+  }
+  catch (e) { signal?.throwIfAborted(); if (local?.length) return local; throw e; }
 }

@@ -165,4 +165,7 @@ export function orderMapOverlays(map: MLMap) {
   for (const id of ["meridian-route-case", "meridian-route-line", "meridian-route-arrows", "meridian-clusters", "meridian-cluster-count", "meridian-markers", "meridian-marker-labels", "meridian-me-halo", "meridian-me"]) {
     if (map.getLayer(id)) map.moveLayer(id);
   }
+  for (const id of ["place-minor", "place-town", "place-country"]) {
+    if (map.getLayer(id)) map.moveLayer(id);
+  }
 }
