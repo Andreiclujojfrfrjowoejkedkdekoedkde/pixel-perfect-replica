@@ -125,12 +125,12 @@ export function HomePanel() {
             <Button asChild className="home-directions h-12 w-full justify-start rounded-lg"><Link to="/directions"><Navigation strokeWidth={1.5} /> Directions <ArrowUpRight className="ml-auto" /></Link></Button>
             <Button asChild variant="ghost" className="mt-2 h-10 w-full justify-start text-muted-foreground"><Link to="/offline"><Download strokeWidth={1.5} /> Offline maps <ArrowUpRight className="ml-auto" /></Link></Button>
           </div>
-          <section className="pt-5">
-            <Button variant="ghost" onClick={() => setSavedOpen(v => !v)} aria-expanded={savedOpen} aria-controls="saved-places" className="h-9 w-full justify-between px-5"><span className="smallcaps text-xs text-muted-foreground">Saved <span className="tnum ml-2">{saved.length}</span></span>{savedOpen ? <ChevronDown strokeWidth={1.5} /> : <ChevronRight strokeWidth={1.5} />}</Button>
+          <section className="pt-2">
+            <Button variant="ghost" onClick={() => setSavedOpen(v => !v)} aria-expanded={savedOpen} aria-controls="saved-places" className="h-8 w-full justify-between px-5"><span className="smallcaps text-xs text-muted-foreground">Saved <span className="tnum ml-2">{saved.length}</span></span>{savedOpen ? <ChevronDown strokeWidth={1.5} /> : <ChevronRight strokeWidth={1.5} />}</Button>
             {savedOpen && <div id="saved-places"><div className="hairline mx-5 mt-2" />{saved.length ? saved.map((p) => <Row key={p.id} p={p} icon={Bookmark} />) : <p className="px-5 py-4 text-sm text-muted-foreground">No saved places yet</p>}</div>}
           </section>
-          <section className="pt-5">
-            <Button variant="ghost" onClick={() => setRecentOpen(v => !v)} aria-expanded={recentOpen} aria-controls="recent-places" className="h-9 w-full justify-between px-5"><span className="smallcaps text-xs text-muted-foreground">Recent <span className="tnum ml-2">{recent.length}</span></span>{recentOpen ? <ChevronDown strokeWidth={1.5} /> : <ChevronRight strokeWidth={1.5} />}</Button>
+          <section>
+            <Button variant="ghost" onClick={() => setRecentOpen(v => !v)} aria-expanded={recentOpen} aria-controls="recent-places" className="h-8 w-full justify-between px-5"><span className="smallcaps text-xs text-muted-foreground">Recent <span className="tnum ml-2">{recent.length}</span></span>{recentOpen ? <ChevronDown strokeWidth={1.5} /> : <ChevronRight strokeWidth={1.5} />}</Button>
             {recentOpen && <div id="recent-places"><div className="hairline mx-5 mt-2" />{recent.length ? <>{recent.map((p) => <Row key={p.id} p={p} icon={Clock} />)}<Button variant="ghost" onClick={() => library.clearRecent()} className="mx-5 text-xs text-muted-foreground">Clear</Button></> : <p className="px-5 py-4 text-sm text-muted-foreground">No recent searches</p>}</div>}
           </section>
         </>
