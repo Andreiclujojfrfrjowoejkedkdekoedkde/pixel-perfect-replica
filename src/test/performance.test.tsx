@@ -1,6 +1,5 @@
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MapProvider, useMapState } from "../components/map/MapContext";
 import { MapCanvas } from "../components/map/MapCanvas";
 
 const canvas = vi.hoisted(() => ({ state: null as unknown, map: null as unknown, order: vi.fn() }));
