@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { storage } from "./platform";
 
 export type MapMode = "standard" | "3d" | "earth" | "street";
@@ -88,15 +88,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
 
-  const update = (p: Partial<Settings>) =>
+  const update = useCallback((p: Partial<Settings>) =>
     setSettings((s) => {
       const n = { ...s, ...p };
       if ("locationHistory" in p || "tripHistory" in p) storage.set("privacy-v2", true);
       storage.set("settings", n);
       return n;
-    });
+    }), []);
 
-  return <SettingsCtx.Provider value={{ settings, update, dark }}>{children}</SettingsCtx.Provider>;
+  const value = useMemo(() => ({ settings, update, dark }), [settings, update, dark]);
+  return <SettingsCtx.Provider value={value}>{children}</SettingsCtx.Provider>;
 }
 
 export function useSettings() {

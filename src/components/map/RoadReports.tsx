@@ -1,4 +1,4 @@
-import { createElement, useEffect, useState } from "react";
+import { createElement, useEffect, useMemo, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { useServerFn } from "@tanstack/react-start";
 import { Link, useMatchRoute } from "@tanstack/react-router";
@@ -53,8 +53,9 @@ export function RoadReports() {
     return () => { disposed = true; markers.forEach(m => m.remove()); };
   }, [map, reports]);
   const route = routes[activeRoute];
-  const snap = position && route ? nearestOnLine([position.lon,position.lat], route.coords) : null;
-  const ahead = navigating && position && route && snap ? reports.find(r => { const rs = nearestOnLine([r.lon,r.lat],route.coords); return Date.parse(r.expires_at)>Date.now() && rs.distance<80 && rs.along>snap.along && rs.along-snap.along<2000 && haversine([position.lon,position.lat],[r.lon,r.lat])<2000; }) : null;
+  const reportSnaps = useMemo(() => navigating && route ? reports.map(report => ({ report, snap: nearestOnLine([report.lon, report.lat], route.coords) })) : [], [navigating, route, reports]);
+  const snap = useMemo(() => navigating && position && route ? nearestOnLine([position.lon,position.lat], route.coords) : null, [navigating, position, route]);
+  const ahead = position && snap ? reportSnaps.find(({ report: r, snap: rs }) => Date.parse(r.expires_at)>Date.now() && rs.distance<80 && rs.along>snap.along && rs.along-snap.along<2000 && haversine([position.lon,position.lat],[r.lon,r.lat])<2000)?.report : null;
   const start = async () => { setOpen(true); setMessage(""); const p = position ?? await location.once().catch(() => null); if (p) { setPosition(p); setPoint([p.lon,p.lat]); } else { setPoint(null); setMessage("Allow location access to attach your current location."); } };
   return <>
     {!picking && showReportAction && <div className={`absolute right-4 z-40 ${navigating ? "top-40 md:top-5" : "bottom-24 md:bottom-5"}`}><Button variant="outline" className="glass h-11" onClick={start}><AlertTriangle strokeWidth={1.5} className="h-4 w-4" /> Report</Button></div>}
