@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { Feature, FeatureCollection } from "geojson";
 import { useNavigate } from "@tanstack/react-router";
 import type { GeoJSONSource, Map as MLMap } from "maplibre-gl";
@@ -22,6 +22,23 @@ export function MapCanvas() {
   pickRef.current = st.pickPoint;
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
+  const sourceData = useRef(new WeakMap<GeoJSONSource, FeatureCollection>());
+  const routeData = useMemo<FeatureCollection>(() => {
+    const features: Feature[] = st.routes.map((r, i) => ({
+      type: "Feature", properties: { active: i === st.activeRoute ? 1 : 0 },
+      geometry: { type: "LineString", coordinates: r.coords },
+    }));
+    features.sort((a, b) => Number(a.properties?.["active"] ?? 0) - Number(b.properties?.["active"] ?? 0));
+    return { type: "FeatureCollection", features };
+  }, [st.routes, st.activeRoute]);
+  const markerData = useMemo<FeatureCollection>(() => ({
+    type: "FeatureCollection",
+    features: st.markers.map(m => ({ type: "Feature", properties: { id: m.id, name: m.name }, geometry: { type: "Point", coordinates: [m.lon, m.lat] } })),
+  }), [st.markers]);
+  const positionData = useMemo<FeatureCollection>(() => ({
+    type: "FeatureCollection",
+    features: st.position ? [{ type: "Feature", properties: { acc: st.position.accuracy }, geometry: { type: "Point", coordinates: [st.position.lon, st.position.lat] } }] : [],
+  }), [st.position]);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,29 +115,27 @@ export function MapCanvas() {
   useEffect(() => {
     const map = st.map;
     if (!map || !map.getStyle()?.layers) return;
+    const needsOrdering = !map.getLayer("meridian-route-case") || !map.getLayer("meridian-markers") || !map.getLayer("meridian-me");
     const set = (id: string, data: FeatureCollection) => {
-      const s = map.getSource(id) as GeoJSONSource | undefined;
-      if (s) s.setData(data);
-      else map.addSource(id, { type: "geojson", data, ...(id === "meridian-markers" ? { cluster: true, clusterRadius: 50, clusterMaxZoom: 14 } : {}) });
+      let s = map.getSource(id) as GeoJSONSource | undefined;
+      if (s) {
+        if (sourceData.current.get(s) === data) return;
+        s.setData(data);
+      } else {
+        map.addSource(id, { type: "geojson", data, ...(id === "meridian-markers" ? { cluster: true, clusterRadius: 50, clusterMaxZoom: 14 } : {}) });
+        s = map.getSource(id) as GeoJSONSource | undefined;
+      }
+      if (s) sourceData.current.set(s, data);
     };
 
-    const lines: Feature[] = st.routes.map((r, i) => ({
-      type: "Feature",
-      properties: { active: i === st.activeRoute ? 1 : 0 },
-      geometry: { type: "LineString", coordinates: r.coords },
-    }));
-    lines.sort((a, b) => Number(a.properties?.["active"] ?? 0) - Number(b.properties?.["active"] ?? 0));
-    set("meridian-route", { type: "FeatureCollection", features: lines });
+    set("meridian-route", routeData);
     if (!map.getLayer("meridian-route-case")) {
       map.addLayer({ id: "meridian-route-case", type: "line", source: "meridian-route", layout: { "line-cap": "round", "line-join": "round", "line-sort-key": ["get", "active"] }, paint: { "line-color": routeRimColor(dark), "line-width": ["interpolate", ["linear"], ["zoom"], 8, 7, 13, 10, 17, 16], "line-opacity": 0.95 } });
       map.addLayer({ id: "meridian-route-line", type: "line", source: "meridian-route", layout: { "line-cap": "round", "line-join": "round", "line-sort-key": ["get", "active"] }, paint: { "line-color": ["case", ["==", ["get", "active"], 1], routeColor(dark), altRouteColor(dark)], "line-width": ["interpolate", ["linear"], ["zoom"], 8, 4, 13, 6, 17, 11], "line-opacity": ["case", ["==", ["get", "active"], 1], 1, 0.7] } });
       map.addLayer({ id: "meridian-route-arrows", type: "symbol", source: "meridian-route", minzoom: 12, filter: ["==", ["get", "active"], 1], layout: { "symbol-placement": "line", "symbol-spacing": 100, "text-field": "›", "text-font": ["Noto Sans Bold"], "text-size": 23, "text-keep-upright": false, "text-rotation-alignment": "map", "text-pitch-alignment": "map", "text-allow-overlap": true, "text-ignore-placement": true }, paint: { "text-color": routeArrowColor(), "text-halo-color": routeColor(dark), "text-halo-width": 1 } });
     }
 
-    set("meridian-markers", {
-      type: "FeatureCollection",
-      features: st.markers.map((m) => ({ type: "Feature", properties: { id: m.id, name: m.name }, geometry: { type: "Point", coordinates: [m.lon, m.lat] } })),
-    });
+    set("meridian-markers", markerData);
     if (!map.getLayer("meridian-markers")) {
       map.addLayer({ id: "meridian-clusters", type: "circle", source: "meridian-markers", filter: ["has", "point_count"], paint: { "circle-radius": ["step", ["get", "point_count"], 17, 20, 22, 100, 28], "circle-color": routeColor(dark), "circle-stroke-color": dark ? "#1B1612" : "#FBF6EC", "circle-stroke-width": 2.5 } });
       map.addLayer({ id: "meridian-cluster-count", type: "symbol", source: "meridian-markers", filter: ["has", "point_count"], layout: { "text-field": ["get", "point_count_abbreviated"], "text-font": ["Noto Sans Bold"], "text-size": 12 }, paint: { "text-color": dark ? "#1B1612" : "#FBF6EC" } });
@@ -128,17 +143,13 @@ export function MapCanvas() {
       map.addLayer({ id: "meridian-marker-labels", type: "symbol", source: "meridian-markers", filter: ["!", ["has", "point_count"]], layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": 12, "text-offset": [0, 1.3], "text-anchor": "top", "text-optional": true }, paint: { "text-color": dark ? "#EDE3D1" : "#2A2119", "text-halo-color": dark ? "#1B1612" : "#F1E9DA", "text-halo-width": 1.5 } });
     }
 
-    const p = st.position;
-    set("meridian-me", {
-      type: "FeatureCollection",
-      features: p ? [{ type: "Feature", properties: { acc: p.accuracy }, geometry: { type: "Point", coordinates: [p.lon, p.lat] } }] : [],
-    });
+    set("meridian-me", positionData);
     if (!map.getLayer("meridian-me")) {
       map.addLayer({ id: "meridian-me-halo", type: "circle", source: "meridian-me", paint: { "circle-radius": 18, "circle-color": routeColor(dark), "circle-opacity": 0.15 } });
       map.addLayer({ id: "meridian-me", type: "circle", source: "meridian-me", paint: { "circle-radius": 7, "circle-color": routeColor(dark), "circle-stroke-color": "#FBF6EC", "circle-stroke-width": 3 } });
     }
-    orderMapOverlays(map);
-  }, [st.map, st.styleVersion, st.routes, st.activeRoute, st.markers, st.position, dark]);
+    if (needsOrdering) orderMapOverlays(map);
+  }, [st.map, st.styleVersion, routeData, markerData, positionData, dark]);
 
   return (
     <div className="absolute inset-0">

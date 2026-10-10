@@ -11,11 +11,26 @@ import { visibleMapPlaces } from "@/lib/map-places";
 
 const ICONS = { fuel: Fuel, food: Utensils, parking: ParkingSquare, charging: PlugZap, pharmacy: Pill, lodging: BedDouble };
 
+function PlaceRow({ p, icon: Icon, origin }: { p: Place; icon: typeof Clock; origin: [number, number] | null }) {
+  const { map } = useMapState();
+  const { settings } = useSettings();
+  const navigate = useNavigate();
+  return <Button variant="ghost"
+    onClick={() => { library.addRecent(p); map?.flyTo({ center: [p.lon, p.lat], zoom: 16 }); navigate({ to: "/place/$id", params: { id: p.id } }); }}
+    className="h-auto justify-start whitespace-normal rounded-none flex w-full items-center gap-3 border-b px-5 py-3 text-left last:border-0 hover:bg-secondary/60"
+  >
+    <Icon strokeWidth={1.5} className="h-4 w-4 shrink-0 text-muted-foreground" />
+    <span className="min-w-0 flex-1">
+      <span className="block truncate font-display text-[15px]">{p.name}</span>
+      <span className="block truncate text-xs text-muted-foreground">{p.kind}{p.subtitle ? ` · ${p.subtitle}` : ""}</span>
+    </span>
+    {origin && <span className="tnum text-xs text-muted-foreground">{fmtDistance(haversine(origin, [p.lon, p.lat]), settings.units)}</span>}
+  </Button>;
+}
+
 export function HomePanel() {
   const { map, setMarkers, position } = useMapState();
   const { saved, recent } = useLibrary();
-  const { settings } = useSettings();
-  const navigate = useNavigate();
   const [active, setActive] = useState<string | null>(null);
   const [results, setResults] = useState<Place[]>([]);
   const [status, setStatus] = useState<string | null>(null);
@@ -77,20 +92,6 @@ export function HomePanel() {
 
   const origin: [number, number] | null = position ? [position.lon, position.lat] : map ? (map.getCenter().toArray() as [number, number]) : null;
 
-  const Row = ({ p, icon: Icon }: { p: Place; icon: typeof Clock }) => (
-    <Button variant="ghost"
-      onClick={() => { library.addRecent(p); map?.flyTo({ center: [p.lon, p.lat], zoom: 16 }); navigate({ to: "/place/$id", params: { id: p.id } }); }}
-      className="h-auto justify-start whitespace-normal rounded-none flex w-full items-center gap-3 border-b px-5 py-3 text-left last:border-0 hover:bg-secondary/60"
-    >
-      <Icon strokeWidth={1.5} className="h-4 w-4 shrink-0 text-muted-foreground" />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-display text-[15px]">{p.name}</span>
-        <span className="block truncate text-xs text-muted-foreground">{p.kind}{p.subtitle ? ` · ${p.subtitle}` : ""}</span>
-      </span>
-      {origin && <span className="tnum text-xs text-muted-foreground">{fmtDistance(haversine(origin, [p.lon, p.lat]), settings.units)}</span>}
-    </Button>
-  );
-
   return (
     <div className="home-panel pb-6">
       <header className="flex items-center justify-between px-5 pb-4 pt-5">
@@ -117,7 +118,7 @@ export function HomePanel() {
       {results.length > 0 ? (
         <section>
           <h2 className="smallcaps px-5 pt-2 text-xs text-muted-foreground">{results.length} in view</h2>
-          {results.slice(0, 40).map((p) => <Row key={p.id} p={p} icon={ICONS[active as keyof typeof ICONS] ?? Clock} />)}
+          {results.slice(0, 40).map((p) => <PlaceRow key={p.id} p={p} origin={origin} icon={ICONS[active as keyof typeof ICONS] ?? Clock} />)}
         </section>
       ) : (
         <>
@@ -125,13 +126,13 @@ export function HomePanel() {
             <Button asChild className="home-directions h-12 w-full justify-start rounded-lg"><Link to="/directions"><Navigation strokeWidth={1.5} /> Directions <ArrowUpRight className="ml-auto" /></Link></Button>
             <Button asChild variant="ghost" className="mt-2 h-10 w-full justify-start text-muted-foreground"><Link to="/offline"><Download strokeWidth={1.5} /> Offline maps <ArrowUpRight className="ml-auto" /></Link></Button>
           </div>
-          <section className="pt-5">
-            <Button variant="ghost" onClick={() => setSavedOpen(v => !v)} aria-expanded={savedOpen} aria-controls="saved-places" className="h-9 w-full justify-between px-5"><span className="smallcaps text-xs text-muted-foreground">Saved <span className="tnum ml-2">{saved.length}</span></span>{savedOpen ? <ChevronDown strokeWidth={1.5} /> : <ChevronRight strokeWidth={1.5} />}</Button>
-            {savedOpen && <div id="saved-places"><div className="hairline mx-5 mt-2" />{saved.length ? saved.map((p) => <Row key={p.id} p={p} icon={Bookmark} />) : <p className="px-5 py-4 text-sm text-muted-foreground">No saved places yet</p>}</div>}
+          <section className="pt-2">
+            <Button variant="ghost" onClick={() => setSavedOpen(v => !v)} aria-expanded={savedOpen} aria-controls="saved-places" className="h-8 w-full justify-between px-5"><span className="smallcaps text-xs text-muted-foreground">Saved <span className="tnum ml-2">{saved.length}</span></span>{savedOpen ? <ChevronDown strokeWidth={1.5} /> : <ChevronRight strokeWidth={1.5} />}</Button>
+            {savedOpen && <div id="saved-places"><div className="hairline mx-5 mt-2" />{saved.length ? saved.map((p) => <PlaceRow key={p.id} p={p} origin={origin} icon={Bookmark} />) : <p className="px-5 py-4 text-sm text-muted-foreground">No saved places yet</p>}</div>}
           </section>
-          <section className="pt-5">
-            <Button variant="ghost" onClick={() => setRecentOpen(v => !v)} aria-expanded={recentOpen} aria-controls="recent-places" className="h-9 w-full justify-between px-5"><span className="smallcaps text-xs text-muted-foreground">Recent <span className="tnum ml-2">{recent.length}</span></span>{recentOpen ? <ChevronDown strokeWidth={1.5} /> : <ChevronRight strokeWidth={1.5} />}</Button>
-            {recentOpen && <div id="recent-places"><div className="hairline mx-5 mt-2" />{recent.length ? <>{recent.map((p) => <Row key={p.id} p={p} icon={Clock} />)}<Button variant="ghost" onClick={() => library.clearRecent()} className="mx-5 text-xs text-muted-foreground">Clear</Button></> : <p className="px-5 py-4 text-sm text-muted-foreground">No recent searches</p>}</div>}
+          <section>
+            <Button variant="ghost" onClick={() => setRecentOpen(v => !v)} aria-expanded={recentOpen} aria-controls="recent-places" className="h-8 w-full justify-between px-5"><span className="smallcaps text-xs text-muted-foreground">Recent <span className="tnum ml-2">{recent.length}</span></span>{recentOpen ? <ChevronDown strokeWidth={1.5} /> : <ChevronRight strokeWidth={1.5} />}</Button>
+            {recentOpen && <div id="recent-places"><div className="hairline mx-5 mt-2" />{recent.length ? <>{recent.map((p) => <PlaceRow key={p.id} p={p} origin={origin} icon={Clock} />)}<Button variant="ghost" onClick={() => library.clearRecent()} className="mx-5 text-xs text-muted-foreground">Clear</Button></> : <p className="px-5 py-4 text-sm text-muted-foreground">No recent searches</p>}</div>}
           </section>
         </>
       )}

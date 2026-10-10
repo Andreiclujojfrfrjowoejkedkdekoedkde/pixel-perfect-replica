@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import type { Map as MLMap } from "maplibre-gl";
 import type { MapMode } from "@/lib/settings";
 import type { Place, Route } from "@/lib/services";
@@ -42,17 +42,18 @@ export function MapProvider({ children, initialMode }: { children: ReactNode; in
   const [streetImage, setStreetImage] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
   const [selection, setSelection] = useState<{ label: string; callback: (coord: [number, number]) => void } | null>(null);
+  const bumpStyle = useCallback(() => setSV(v => v + 1), []);
+  const setRoutes = useCallback((r: Route[], active = 0) => { setR(r); setActiveRoute(active); }, []);
+  const beginPick = useCallback((label: string, callback: (coord: [number, number]) => void) => setSelection({ label, callback }), []);
+  const cancelPick = useCallback(() => setSelection(null), []);
+  const value = useMemo<MapState>(() => ({
+    map, setMap, mode, setMode, styleVersion, bumpStyle, position, setPosition,
+    markers, setMarkers, routes, activeRoute, setRoutes, setActiveRoute,
+    streetImage, setStreetImage, navigating, setNavigating,
+    picking: selection?.label ?? null, pickPoint: selection?.callback ?? null, beginPick, cancelPick,
+  }), [map, mode, styleVersion, bumpStyle, position, markers, routes, activeRoute, setRoutes, streetImage, navigating, selection, beginPick, cancelPick]);
   return (
-    <Ctx.Provider
-      value={{
-        map, setMap, mode, setMode, styleVersion, bumpStyle: () => setSV((v) => v + 1),
-        position, setPosition, markers, setMarkers, routes, activeRoute,
-        setRoutes: (r, a = 0) => { setR(r); setActiveRoute(a); },
-        setActiveRoute, streetImage, setStreetImage, navigating, setNavigating,
-        picking: selection?.label ?? null, pickPoint: selection?.callback ?? null,
-        beginPick: (label, callback) => setSelection({ label, callback }), cancelPick: () => setSelection(null),
-      }}
-    >
+    <Ctx.Provider value={value}>
       {children}
     </Ctx.Provider>
   );
