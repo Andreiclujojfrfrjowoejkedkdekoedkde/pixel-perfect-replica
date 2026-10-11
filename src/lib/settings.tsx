@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { storage } from "./platform";
 
 export type MapMode = "standard" | "3d" | "earth" | "street";
@@ -64,17 +64,20 @@ export const defaultSettings: Settings = {
   trafficThickness: 1,
 };
 
-type Ctx = { settings: Settings; update: (p: Partial<Settings>) => void; dark: boolean };
+type Ctx = { settings: Settings; update: (p: Partial<Settings>) => void; applySynced: (p: Partial<Settings>) => void; dark: boolean };
 const SettingsCtx = createContext<Ctx | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [systemDark, setSystemDark] = useState(false);
+  const current = useRef(settings);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const stored = storage.get<Partial<Settings>>("settings", {});
     const privacyChosen = storage.get("privacy-v2", false);
-    setSettings({ ...defaultSettings, ...stored, ...(!privacyChosen ? { locationHistory: false, tripHistory: false, syncTrips: false } : {}) });
+    current.current = { ...defaultSettings, ...stored, ...(!privacyChosen ? { locationHistory: false, tripHistory: false, syncTrips: false } : {}) };
+    setSettings(current.current); setLoaded(true);
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     setSystemDark(mq.matches);
     const h = (e: MediaQueryListEvent) => setSystemDark(e.matches);
@@ -88,15 +91,25 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
 
-  const update = useCallback((p: Partial<Settings>) =>
-    setSettings((s) => {
-      const n = { ...s, ...p };
-      if ("locationHistory" in p || "tripHistory" in p) storage.set("privacy-v2", true);
-      storage.set("settings", n);
-      return n;
-    }), []);
+  const applySynced = useCallback((p: Partial<Settings>) => {
+    if (!Object.entries(p).some(([k, v]) => current.current[k as keyof Settings] !== v)) return;
+    current.current = { ...current.current, ...p }; setSettings(current.current);
+  }, []);
+  const update = useCallback((p: Partial<Settings>) => {
+    applySynced(p);
+    if ("locationHistory" in p || "tripHistory" in p) storage.set("privacy-v2", true);
+    window.dispatchEvent(new CustomEvent("meridian-settings-change", { detail: p }));
+  }, [applySynced]);
+  useEffect(() => {
+    if (!loaded) return;
+    const save = () => storage.set("settings", current.current);
+    const timer = setTimeout(save, 200);
+    window.addEventListener("pagehide", save);
+    return () => { clearTimeout(timer); window.removeEventListener("pagehide", save); };
+  }, [settings, loaded]);
+  useEffect(() => () => storage.set("settings", current.current), []);
 
-  const value = useMemo(() => ({ settings, update, dark }), [settings, update, dark]);
+  const value = useMemo(() => ({ settings, update, applySynced, dark }), [settings, update, applySynced, dark]);
   return <SettingsCtx.Provider value={value}>{children}</SettingsCtx.Provider>;
 }
 

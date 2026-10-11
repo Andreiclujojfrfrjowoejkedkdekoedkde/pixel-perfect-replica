@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 
 /** Builds an edge-weighted displacement map: neutral grey in the middle,
  *  strong push at the rims so the bend concentrates at the glass edge. */
+let displacementMap: string | null = null;
 function makeDisplacementMap(size = 256) {
+  if (displacementMap) return displacementMap;
   const c = document.createElement("canvas");
   c.width = c.height = size;
-  const ctx = c.getContext("2d")!;
+  const ctx = c.getContext("2d");
+  if (!ctx) return null;
   const img = ctx.createImageData(size, size);
   const rim = 0.18;
   for (let y = 0; y < size; y++) {
@@ -21,7 +24,8 @@ function makeDisplacementMap(size = 256) {
     }
   }
   ctx.putImageData(img, 0, 0);
-  return c.toDataURL();
+  displacementMap = c.toDataURL();
+  return displacementMap;
 }
 
 export function GlassDefs() {
@@ -39,16 +43,23 @@ export function GlassDefs() {
 
     // Highlight follows pointer on desktop, tilt on mobile.
     const root = document.documentElement.style;
+    let frame = 0;
+    let latest: [string, string, string] | null = null;
+    const schedule = (x: string, y: string, tilt: string) => {
+      latest = [x, y, tilt];
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        if (!latest) return;
+        root.setProperty("--gx", latest[0]); root.setProperty("--gy", latest[1]); root.setProperty("--gtilt", latest[2]);
+      });
+    };
     const onMove = (e: PointerEvent) => {
-      root.setProperty("--gx", `${(e.clientX / innerWidth) * 100}%`);
-      root.setProperty("--gy", `${(e.clientY / innerHeight) * 100}%`);
-      root.setProperty("--gtilt", `${(e.clientX / innerWidth - 0.5) * 40}deg`);
+      schedule(`${(e.clientX / innerWidth) * 100}%`, `${(e.clientY / innerHeight) * 100}%`, `${(e.clientX / innerWidth - 0.5) * 40}deg`);
     };
     const onTilt = (e: DeviceOrientationEvent) => {
       if (e.gamma == null || e.beta == null) return;
-      root.setProperty("--gx", `${50 + e.gamma}%`);
-      root.setProperty("--gy", `${Math.max(0, e.beta - 30)}%`);
-      root.setProperty("--gtilt", `${e.gamma}deg`);
+      schedule(`${50 + e.gamma}%`, `${Math.max(0, e.beta - 30)}%`, `${e.gamma}deg`);
     };
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!reduceMotion) {
@@ -56,6 +67,7 @@ export function GlassDefs() {
       window.addEventListener("deviceorientation", onTilt, { passive: true });
     }
     return () => {
+      cancelAnimationFrame(frame);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("deviceorientation", onTilt);
     };

@@ -19,6 +19,8 @@ function commit(n: Lists) {
 }
 
 export const library = {
+  removeSaved(id: string) { const s = load(); commit({ ...s, saved: s.saved.filter(p => p.id !== id) }); },
+  renameSaved(id: string, name: string) { const clean = name.trim().slice(0, 120); if (!clean) return; const s = load(); commit({ ...s, saved: s.saved.map(p => p.id === id ? { ...p, name: clean } : p) }); },
   toggleSave(p: Place) {
     const s = load();
     const has = s.saved.some((x) => x.id === p.id);

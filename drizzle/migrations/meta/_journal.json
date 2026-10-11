@@ -15,6 +15,13 @@
       "when": 1791440136682,
       "tag": "0001_navigation_retention_and_consent",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791694727061,
+      "tag": "0002_account_display_preferences_sync",
+      "breakpoints": true
     }
   ]
 }

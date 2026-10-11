@@ -10,6 +10,8 @@
 <!-- LOVABLE:END -->
 
 ## Meridian architecture
+- Sync owner-only preference patches with opt-in and per-account offline queues; exclude privacy/GPS. Why: avoid leaks and lost edits.
+- Contain offscreen menu sections, cache glass maps and batch highlights per frame. Why: preserve effects at lower cost.
 - One MapLibre canvas lives in the `_map` layout route; child routes render panel content only. Why: single canvas keeps 60 fps and lets liquid glass refract the live map.
 - Map actions have stable identities; overlay data is memoized independently and sent only to changed or recreated sources, with ordering only on layer creation. Why: location ticks must not rebuild route geometry, recluster unchanged places, or restart selection effects.
 - maplibre-gl is imported dynamically inside effects. Why: it touches `window` and must not run during SSR.
