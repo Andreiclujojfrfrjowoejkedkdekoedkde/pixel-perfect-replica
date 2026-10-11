@@ -9,6 +9,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { clearTrips } from "@/lib/trips";
+import { BackButton } from "@/components/shell/BackButton";
 
 export const Route = createFileRoute("/_map/settings")({
   validateSearch: (search: Record<string, unknown>): { from?: "home" | "map" } => ({ from: search["from"] === "home" ? "home" : "map" }),
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/_map/settings")({
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="px-5 pt-6">
+    <section className="menu-section px-5 pt-6">
       <h2 className="smallcaps text-xs text-muted-foreground">{title}</h2>
       <div className="hairline mt-2" />
       <div className="divide-y">{children}</div>
@@ -53,7 +54,7 @@ function SettingsPage() {
   return (
     <div className="pb-10">
       <header className="flex items-center justify-between px-5 pt-5">
-        <h1 className="font-display text-2xl">Settings</h1>
+        <div className="flex items-center gap-2"><BackButton fallback={from === "home" ? "/" : "/map"} /><h1 className="font-display text-2xl">Settings</h1></div>
         <Button variant="ghost" size="icon" onClick={() => navigate({ to: from === "home" ? "/" : "/map" })} aria-label="Close settings" className="text-muted-foreground hover:text-foreground"><X strokeWidth={1.5} /></Button>
       </header>
       <Section title="General">

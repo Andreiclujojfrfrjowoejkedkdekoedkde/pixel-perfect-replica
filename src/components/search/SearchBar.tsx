@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Search, X, Clock, Bookmark, MapPin, Settings as Cog, Navigation } from "lucide-react";
+import { Search, X, Clock, Bookmark, MapPin, Settings as Cog, Navigation, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMapState } from "@/components/map/MapContext";
 import { photonSearch, type Place } from "@/lib/services";
@@ -100,7 +100,7 @@ export const SearchBar = forwardRef<HTMLInputElement, { home?: boolean; onChoose
           className="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
         />
         {q && <Button variant="ghost" size="icon" aria-label="Clear search" onClick={() => { setQ(""); setResults([]); }} className="shrink-0 text-muted-foreground hover:text-foreground"><X strokeWidth={1.5} className="h-5 w-5" /></Button>}
-        {home ? <Button disabled={!flat.length} onClick={() => { const p = flat[cursor] ?? flat[0]; if (p) choose(p); }} className="shrink-0 rounded-full px-5"><Navigation strokeWidth={1.5} className="h-4 w-4" />Go</Button> : !onChoose && <Button variant="ghost" size="icon" aria-label="Settings" onClick={() => navigate({ to: "/settings" })} className="shrink-0 text-muted-foreground hover:text-foreground"><Cog strokeWidth={1.5} className="h-5 w-5" /></Button>}
+        {home ? <Button disabled={!flat.length} onClick={() => { const p = flat[cursor] ?? flat[0]; if (p) choose(p); }} className="shrink-0 rounded-full px-5"><Navigation strokeWidth={1.5} className="h-4 w-4" />Go</Button> : !onChoose && <div className="flex shrink-0 items-center"><Button variant="ghost" size="icon" aria-label="Home" title="Home" onClick={() => navigate({ to: "/" })} className="h-8 w-8 text-muted-foreground hover:text-foreground"><Home strokeWidth={1.5} className="h-4 w-4" /></Button><Button variant="ghost" size="icon" aria-label="Settings" title="Settings" onClick={() => navigate({ to: "/settings", search: { from: "map" } })} className="h-8 w-8 text-muted-foreground hover:text-foreground"><Cog strokeWidth={1.5} className="h-5 w-5" /></Button></div>}
       </div>
       {open && (groups.length > 0 || error) && (
         <div id="search-results" role="listbox" className={`surface absolute left-0 right-0 z-40 max-h-[60vh] overflow-y-auto rounded-2xl border py-2 shadow-xl ${home ? "top-20" : "top-14"}`}>

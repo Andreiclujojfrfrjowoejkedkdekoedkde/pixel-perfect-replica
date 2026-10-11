@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSettings } from "./settings";
 import { readTrips, mergeTrips, clearTrips } from "./trips";
 import { storage } from "./platform";
+import { PreferenceSyncProvider } from "./preference-sync";
 
 type Account = { user: User | null; ready: boolean; consentNeeded: boolean; syncStatus: string; refresh: () => Promise<void> };
 const Context = createContext<Account | null>(null);
@@ -61,6 +62,6 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     const channel = supabase.channel(`trip-sync-${user.id}`).on("postgres_changes", { event: "*", schema: "public", table: "trip_summaries", filter: `user_id=eq.${user.id}` }, () => { void sync(); }).subscribe();
     return () => { cancelled = true; clearInterval(timer); window.removeEventListener("meridian-trips", sync); window.removeEventListener("online", sync); void supabase.removeChannel(channel); };
   }, [user?.id, settings.syncTrips, settings.tripHistory, consentNeeded]);
-  return <Context.Provider value={{ user, ready, consentNeeded, syncStatus, refresh }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ user, ready, consentNeeded, syncStatus, refresh }}><PreferenceSyncProvider userId={user?.id ?? null}>{children}</PreferenceSyncProvider></Context.Provider>;
 }
 export function useAccount() { const value = useContext(Context); if (!value) throw new Error("Account provider missing"); return value; }
