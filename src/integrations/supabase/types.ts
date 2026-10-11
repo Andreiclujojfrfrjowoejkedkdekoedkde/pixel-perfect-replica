@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_settings: {
+        Row: {
+          enabled: boolean
+          preferences: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          enabled?: boolean
+          preferences?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          enabled?: boolean
+          preferences?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       eta_shares: {
         Row: {
           eta: string | null
@@ -184,6 +205,21 @@ export type Database = {
           lat: number
           lon: number
         }[]
+      }
+      patch_account_settings: {
+        Args: { p_enabled?: boolean; p_patch: Json }
+        Returns: {
+          enabled: boolean
+          preferences: Json
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "account_settings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       read_shared_eta: {
         Args: { share_token: string }
