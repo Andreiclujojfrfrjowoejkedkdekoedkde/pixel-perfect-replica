@@ -105,8 +105,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const save = () => storage.set("settings", current.current);
     const timer = setTimeout(save, 200);
     window.addEventListener("pagehide", save);
-    return () => { clearTimeout(timer); window.removeEventListener("pagehide", save); save(); };
+    return () => { clearTimeout(timer); window.removeEventListener("pagehide", save); };
   }, [settings, loaded]);
+  useEffect(() => () => storage.set("settings", current.current), []);
 
   const value = useMemo(() => ({ settings, update, applySynced, dark }), [settings, update, applySynced, dark]);
   return <SettingsCtx.Provider value={value}>{children}</SettingsCtx.Provider>;

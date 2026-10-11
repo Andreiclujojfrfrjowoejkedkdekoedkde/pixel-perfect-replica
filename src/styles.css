@@ -241,6 +241,8 @@
 /* Shared Meridian preferences and mobile home. */
 ::selection { background: var(--primary); color: var(--primary-foreground); }
 .settings-map { filter: blur(2px); transform: scale(1.012); }
+.menu-section { content-visibility: auto; contain-intrinsic-block-size: auto 240px; }
+.overflow-y-auto { overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
 .homepage-map .maplibregl-control-container { display: none; }
 @media (max-width: 639px) {
   .homepage { height: 100dvh; overflow: hidden; align-items: center; }
