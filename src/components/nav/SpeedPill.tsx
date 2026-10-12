@@ -31,7 +31,7 @@ export function SpeedPill() {
     });
     return () => { live = false; markers.forEach(m => m.remove()); };
   }, [map, route, ways, imperialSigns]);
-  const limitKmh = position && ways ? limitAt([position.lng, position.lat], ways) : null;
+  const limitKmh = position && ways ? limitAt([position.lon, position.lat], ways) : null;
   const smooth = useRef(0);
   const [kmh, setKmh] = useState(0);
 
