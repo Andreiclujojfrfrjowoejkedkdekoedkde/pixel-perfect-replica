@@ -13,7 +13,8 @@ export function syncablePreferences(value: unknown): Partial<Settings> {
     const d = defaultSettings[key as keyof Settings];
     if (excluded.has(key) || d === undefined || typeof v !== typeof d) continue;
     if (typeof v === "string" && !enums[key]?.includes(v)) continue;
-    if (typeof v === "number" && (!Number.isFinite(v) || (ranges[key] && (v < ranges[key][0] || v > ranges[key][1])))) continue;
+    const range = ranges[key];
+    if (typeof v === "number" && (!Number.isFinite(v) || (range && (v < (range[0] ?? -Infinity) || v > (range[1] ?? Infinity))))) continue;
     clean[key] = v;
   }
   return clean as Partial<Settings>;
