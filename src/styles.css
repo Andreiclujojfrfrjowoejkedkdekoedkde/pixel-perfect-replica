@@ -169,6 +169,12 @@
 .refract .glass {
   backdrop-filter: url(#meridian-lens) blur(10px) saturate(1.4);
 }
+/* The lens is costly to recompute every map frame and over already-blurred
+   glass; keep the identical blur there and restore the lens when still. */
+.refract.map-moving .glass,
+.refract .glass .glass {
+  backdrop-filter: blur(10px) saturate(1.4);
+}
 
 @media (prefers-reduced-transparency: reduce) {
   .glass, .refract .glass {
