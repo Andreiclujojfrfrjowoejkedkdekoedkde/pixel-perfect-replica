@@ -98,6 +98,7 @@ export function MapCanvas() {
     return () => {
       cancelled = true;
       map?.remove();
+      document.documentElement.classList.remove("map-moving");
       st.setMap(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
