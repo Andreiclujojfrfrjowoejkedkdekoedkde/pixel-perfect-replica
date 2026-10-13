@@ -68,7 +68,7 @@ export function GlassDefs() {
     };
     const onTilt = (e: DeviceOrientationEvent) => {
       if (e.gamma == null || e.beta == null) return;
-      schedule(`${50 + e.gamma}%`, `${Math.max(0, e.beta - 30)}%`, `${e.gamma}deg`);
+      schedule(`${Math.round(50 + e.gamma)}%`, `${Math.round(Math.max(0, e.beta - 30))}%`, `${Math.round(e.gamma)}deg`);
     };
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!reduceMotion) {
