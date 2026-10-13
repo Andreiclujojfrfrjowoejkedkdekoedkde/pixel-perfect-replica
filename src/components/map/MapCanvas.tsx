@@ -64,6 +64,9 @@ export function MapCanvas() {
         try { if (settingsRef.current.locationHistory && !el.current?.closest(".homepage-map")) storage.set("view", { c: map.getCenter().toArray(), z: map.getZoom() }); } catch { /* storage full/blocked */ }
       });
       map.on("style.load", () => st.bumpStyle());
+      let settle = 0;
+      map.on("movestart", () => { clearTimeout(settle); document.documentElement.classList.add("map-moving"); });
+      map.on("moveend", () => { clearTimeout(settle); settle = window.setTimeout(() => document.documentElement.classList.remove("map-moving"), 150); });
       map.on("contextmenu", (e) => {
         try { navigate({ to: "/place/$id", params: { id: `@${e.lngLat.lat.toFixed(6)},${e.lngLat.lng.toFixed(6)}` } }); } catch { /* ignore */ }
       });
@@ -95,6 +98,7 @@ export function MapCanvas() {
     return () => {
       cancelled = true;
       map?.remove();
+      document.documentElement.classList.remove("map-moving");
       st.setMap(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
