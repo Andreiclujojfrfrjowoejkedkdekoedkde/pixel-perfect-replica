@@ -43,23 +43,32 @@ export function GlassDefs() {
 
     // Highlight follows pointer on desktop, tilt on mobile.
     const root = document.documentElement.style;
+    // Root custom properties restyle the whole document, so write them only
+    // when the rounded value changes, and never while a pointer is pressed
+    // (map drags, text selection, button presses) or the tab is hidden.
     let frame = 0;
     let latest: [string, string, string] | null = null;
+    const applied: [string, string, string] = ["", "", ""];
+    const keys = ["--gx", "--gy", "--gtilt"] as const;
     const schedule = (x: string, y: string, tilt: string) => {
       latest = [x, y, tilt];
-      if (frame) return;
+      if (frame || document.hidden) return;
       frame = requestAnimationFrame(() => {
         frame = 0;
         if (!latest) return;
-        root.setProperty("--gx", latest[0]); root.setProperty("--gy", latest[1]); root.setProperty("--gtilt", latest[2]);
+        for (let i = 0; i < 3; i++) {
+          if (applied[i] !== latest[i]) { applied[i] = latest[i]!; root.setProperty(keys[i]!, latest[i]!); }
+        }
       });
     };
     const onMove = (e: PointerEvent) => {
-      schedule(`${(e.clientX / innerWidth) * 100}%`, `${(e.clientY / innerHeight) * 100}%`, `${(e.clientX / innerWidth - 0.5) * 40}deg`);
+      if (e.buttons !== 0 || e.pointerType === "touch") return;
+      const fx = e.clientX / innerWidth, fy = e.clientY / innerHeight;
+      schedule(`${Math.round(fx * 50) * 2}%`, `${Math.round(fy * 50) * 2}%`, `${Math.round((fx - 0.5) * 20) * 2}deg`);
     };
     const onTilt = (e: DeviceOrientationEvent) => {
       if (e.gamma == null || e.beta == null) return;
-      schedule(`${50 + e.gamma}%`, `${Math.max(0, e.beta - 30)}%`, `${e.gamma}deg`);
+      schedule(`${Math.round(50 + e.gamma)}%`, `${Math.round(Math.max(0, e.beta - 30))}%`, `${Math.round(e.gamma)}deg`);
     };
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!reduceMotion) {
