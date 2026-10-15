@@ -1,6 +1,8 @@
 # Meridian roadmap
 
 ## Current improvements
+- [x] Phone layout auto-fit — landscape compaction for guidance, search, settings, account, controls, report dialog, bottom sheet; verified 390×844 and 844×390 with no scrolling or errors
+
 - [x] Finish Back navigation and expanded account saved-place/vehicle controls; add Home beside map-search Settings
 - [x] Add opt-in cross-device travel/map-display preferences sync, excluding privacy consent and location data
 - [x] Optimize long-menu scrolling and animation work without changing visuals; verify navigation, sync and performance checks
