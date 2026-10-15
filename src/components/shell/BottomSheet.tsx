@@ -13,7 +13,7 @@ export function BottomSheet({ children, snap: wanted, title }: { children: React
   useEffect(() => { setVh(window.innerHeight); const f = () => setVh(window.innerHeight); window.addEventListener("resize", f); return () => window.removeEventListener("resize", f); }, []);
   useEffect(() => { if (wanted) setSnap(wanted); }, [wanted]);
 
-  const height = drag ?? SNAPS[snap] * vh;
+  const height = Math.max(64, drag ?? SNAPS[snap] * vh);
 
   const onDown = (e: React.PointerEvent) => {
     (e.target as HTMLElement).setPointerCapture(e.pointerId);

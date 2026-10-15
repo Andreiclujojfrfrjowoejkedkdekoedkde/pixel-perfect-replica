@@ -28,7 +28,7 @@ export const Route = createFileRoute("/_map/settings")({
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="menu-section px-5 pt-6">
+    <section className="menu-section px-5 pt-6 landscape:pt-3">
       <h2 className="smallcaps text-xs text-muted-foreground">{title}</h2>
       <div className="hairline mt-2" />
       <div className="divide-y">{children}</div>
@@ -37,7 +37,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
-  return <div className="flex min-h-12 items-center justify-between gap-4 py-2 text-sm"><span>{label}</span><span className="shrink-0">{children}</span></div>;
+  return <div className="flex min-h-12 items-center justify-between gap-4 py-2 text-sm landscape:min-h-10 landscape:py-1"><span>{label}</span><span className="shrink-0">{children}</span></div>;
 }
 
 function SettingsPage() {
