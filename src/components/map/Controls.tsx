@@ -44,7 +44,7 @@ export function Controls({ layersOpen, setLayersOpen }: { layersOpen: boolean; s
   const side = settings.leftHanded ? "left-3" : "right-3";
 
   return (
-    <div className={`pointer-events-none absolute ${side} top-24 z-20 flex flex-col items-end gap-3 md:top-4`}>
+    <div className={`pointer-events-none absolute ${side} top-24 z-20 flex flex-col items-end gap-3 landscape:top-4 md:top-4`}>
       <div className="glass pointer-events-auto flex flex-col rounded-2xl p-1">
         <button className={btn} aria-label="Map layers (L)" aria-expanded={layersOpen} onClick={() => setLayersOpen(!layersOpen)}><Layers strokeWidth={1.5} /></button>
         <button className={btn} aria-label="Show my location" onClick={locate}><Crosshair strokeWidth={1.5} className={locating ? "animate-pulse text-primary" : ""} /></button>

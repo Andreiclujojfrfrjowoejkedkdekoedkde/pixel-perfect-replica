@@ -13,7 +13,7 @@ import { stopEtaShare } from "@/lib/travel.functions";
 
 function ManeuverIcon({ type }: { type: number }) {
   const Icon = [4,5,6].includes(type) ? Flag : [10,11].includes(type) ? CornerUpRight : [14,15].includes(type) ? CornerUpLeft : [9,18,20,23].includes(type) ? ArrowUpRight : [16,19,21,24].includes(type) ? ArrowUpLeft : [12,13].includes(type) ? RotateCcw : ArrowUp;
-  return <Icon strokeWidth={1.5} className="h-12 w-12 shrink-0 text-primary" />;
+  return <Icon strokeWidth={1.5} className="h-12 w-12 shrink-0 text-primary landscape:h-9 landscape:w-9" />;
 }
 
 export function Guidance({ route: initial, destination, stops, mode, onEnd }: { route: Route; destination: [number, number]; stops: [number, number][]; mode: TravelMode; onEnd: () => void }) {
@@ -122,7 +122,7 @@ export function Guidance({ route: initial, destination, stops, mode, onEnd }: { 
   };
   return <>
     <div className="guidance-top absolute inset-x-3 z-40 md:left-4 md:right-auto md:w-[420px]" aria-live="polite">
-      <div className="glass flex items-center gap-4 rounded-2xl p-4">
+      <div className="glass flex items-center gap-4 rounded-2xl p-4 landscape:p-3">
         <ManeuverIcon type={arrived ? 4 : progress?.next.type ?? 8} />
         <div className="min-w-0 flex-1">
           <div className={`tnum font-semibold leading-none ${recalculating ? "text-xl" : "text-3xl"}`}>{recalculating ? "Recalculating…" : arrived ? "Arrived" : stale ? "Locating" : progress ? fmtDistance(progress.toNext,settings.units) : "Locating"}</div>

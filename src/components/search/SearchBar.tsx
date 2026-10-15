@@ -79,7 +79,7 @@ export const SearchBar = forwardRef<HTMLInputElement, { home?: boolean; onChoose
 
   return (
     <div ref={wrap} className="relative w-full">
-      <div className={`glass flex items-center gap-2 px-3 ${home ? "homepage-search h-[72px] rounded-2xl sm:px-6" : "h-12 rounded-2xl"}`}>
+      <div className={`glass flex items-center gap-2 px-3 ${home ? "homepage-search h-[72px] rounded-2xl landscape:h-14 sm:px-6" : "h-12 rounded-2xl"}`}>
         <Search strokeWidth={1.5} className="h-5 w-5 shrink-0 text-muted-foreground" />
         <input
           ref={ref}
